@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY ./src ./src
 
-EXPOSE 7000
+EXPOSE 8000
 
 # Команда запуска
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "7000", "--reload"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

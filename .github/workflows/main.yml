@@ -35,4 +35,4 @@ jobs:
           docker pull yourusername/reviews-backend:latest
           docker stop reviews-backend || true
           docker rm reviews-backend || true
-          docker run -d --name reviews-backend -e DATABASE="${{ secrets.DATABASE_URL }}" -p 7000:7000 ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
+          docker run -d --name reviews-backend -e DATABASE="${{ secrets.DATABASE_URL }}" -p 7000:8000 ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
