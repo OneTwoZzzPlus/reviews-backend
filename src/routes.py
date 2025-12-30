@@ -24,7 +24,7 @@ async def teacher(iid: int, service: Service = Depends(get_service)) -> TeacherR
     return answer.model_dump(exclude_none=True)
 
 
-@router.get("/subject/{uid}", response_model_exclude_none=True)
+@router.get("/subject/{iid}", response_model_exclude_none=True)
 async def subject(iid: int, service: Service = Depends(get_service)) -> SubjectResponse:
     answer = await service.subject(iid)
     if answer is None:
