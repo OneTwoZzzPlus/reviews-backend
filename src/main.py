@@ -1,7 +1,9 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from src.postgres import Postgres
@@ -31,12 +33,10 @@ app.add_middleware(
 )
 app.include_router(main_router)
 
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 
 @app.get("/", response_class=PlainTextResponse)
 def root():
     return "Reviews API"
-
-
-@app.get("/favicon.ico", response_class=FileResponse)
-def favicon():
-    return FileResponse(os.path.join("../static", "favicon.ico"))
