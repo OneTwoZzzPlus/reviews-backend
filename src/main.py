@@ -39,4 +39,4 @@ def root():
 
 @app.get("/favicon.ico", response_class=FileResponse)
 def favicon():
-    return FileResponse(os.path.join("static", "favicon.ico"))
+    return FileResponse(os.path.join("../static", "favicon.ico"))

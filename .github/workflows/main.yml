@@ -32,7 +32,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
-          docker pull yourusername/reviews-backend:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
           docker stop reviews-backend || true
           docker rm reviews-backend || true
           docker run -d --name reviews-backend -e DATABASE="${{ secrets.DATABASE_URL }}" -p 7000:8000 ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
