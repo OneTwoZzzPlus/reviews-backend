@@ -25,14 +25,13 @@ jobs:
         docker build -t ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest .
         docker push ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
 
-    - name: Deploy to server via SSH
-      uses: appleboy/ssh-action@v0.1.9
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
-          docker stop reviews-backend || true
-          docker rm reviews-backend || true
-          docker run -d --name reviews-backend -e DATABASE="${{ secrets.DATABASE }}" -p 7000:8000 ${{ secrets.DOCKER_USERNAME }}/reviews-backend:latest
+          cd ~/project
+          docker compose -f docker-compose.yml pull backend
+          docker compose -f docker-compose.yml up -d --no-deps backend
