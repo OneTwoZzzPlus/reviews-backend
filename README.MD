@@ -11,6 +11,6 @@ uvicorn src.main:app --reload --env-file .env.dev
 Неободимо поместить переменные и auth данные в GitHub `Settings` -> `Secrets`.
 ```bash
 git add .
-git commit -m "Fixed GA"
+git commit -m "Fixing GA"
 git push -u origin main
 ```
