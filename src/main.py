@@ -1,12 +1,13 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from src.postgres import Postgres
 from src.routes import router as main_router
+from src.content import root_html
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -40,6 +41,6 @@ async def favicon():
     return FileResponse(STATIC_DIR / "favicon.ico")
 
 
-@app.get("/", response_class=PlainTextResponse)
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return "Reviews API"
+    return HTMLResponse(content=root_html, status_code=200)
