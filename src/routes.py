@@ -3,8 +3,9 @@ from typing import Annotated
 
 from src.models import *
 from src.dependencies import get_service, Service
+from src.auth import token_header, get_isu
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(token_header)])
 
 
 @router.get("/search", response_model_exclude_none=True)
@@ -17,7 +18,8 @@ async def search(query: Annotated[str | None, Query(min_length=3)],
 
 
 @router.get("/teacher/{iid}", response_model_exclude_none=True)
-async def teacher(iid: int, service: Service = Depends(get_service)) -> TeacherResponse:
+async def teacher(iid: int, isu: int | None = Depends(get_isu),
+                  service: Service = Depends(get_service)) -> TeacherResponse:
     answer = await service.teacher(iid)
     if answer is None:
         raise HTTPException(status_code=404, detail=f'Teacher "{iid}" not found')
@@ -25,7 +27,8 @@ async def teacher(iid: int, service: Service = Depends(get_service)) -> TeacherR
 
 
 @router.get("/subject/{iid}", response_model_exclude_none=True)
-async def subject(iid: int, service: Service = Depends(get_service)) -> SubjectResponse:
+async def subject(iid: int, isu: int | None = Depends(get_isu),
+                  service: Service = Depends(get_service)) -> SubjectResponse:
     answer = await service.subject(iid)
     if answer is None:
         raise HTTPException(status_code=404, detail=f'Subject "{iid}" not found')
