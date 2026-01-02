@@ -11,6 +11,7 @@ class Teacher(BaseModel):
     id: int
     name: str
     rating: float
+    user_rating: int | None = None
 
 
 class Source(BaseModel):
@@ -26,6 +27,7 @@ class Comment(BaseModel):
     subject: Subject
     source: Source
     karma: int
+    user_karma: int | None = None
 
 
 class Summary(BaseModel):
@@ -34,12 +36,12 @@ class Summary(BaseModel):
     value: str
 
 
-class TeacherResponse(Teacher, BaseModel):
+class TeacherResponse(Teacher):
     summaries: list[Summary]
     comments: list[Comment]
 
 
-class SubjectResponse(Subject, BaseModel):
+class SubjectResponse(Subject):
     teachers: list[TeacherResponse]
 
 
@@ -56,3 +58,13 @@ class SearchItem(BaseModel):
 
 class SearchResponse(BaseModel):
     results: list[SearchItem]
+
+
+class TeacherRateResponse(BaseModel):
+    rating: float
+    user_rating: int
+
+
+class CommentKarmaResponse(BaseModel):
+    karma: int
+    user_karma: int
