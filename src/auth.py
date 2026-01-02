@@ -1,8 +1,16 @@
+import logging
 from fastapi import Request
 from fastapi.security import APIKeyHeader
 import jwt
+from jwt import PyJWKClient
+
+logger = logging.getLogger("uvicorn.error")
 
 token_header = APIKeyHeader(name="token", auto_error=False)
+
+JWKS_URI = "https://id.itmo.ru/auth/realms/itmo/protocol/openid-connect/certs"
+JWT_ISSUER = "https://id.itmo.ru/auth/realms/itmo"
+jwks_client = PyJWKClient(JWKS_URI)
 
 
 class AuthMiddleware:
@@ -34,7 +42,7 @@ async def token_to_isu(token: str) -> int | None:
     if token == "":
         return None
 
-    payload = decode_token(token)
+    payload = verify_itmo_id_token(token)
 
     if payload is None:
         return None
@@ -42,14 +50,38 @@ async def token_to_isu(token: str) -> int | None:
     return payload.get("isu")
 
 
-def decode_token(token: str) -> dict:
+def verify_itmo_id_token(token: str):
     try:
-        return jwt.decode(
-            jwt=token,
-            options={"verify_signature": False}
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256", "PS256"],
+            issuer=JWT_ISSUER,
+            options={
+                "verify_signature": True,
+                "verify_exp": False,
+                "verify_iss": True,
+                "verify_aud": False
+            }
         )
-    except jwt.PyJWTError as jwt_error:
-        return None
+        return payload
+
+    except jwt.exceptions.ExpiredSignatureError:
+        logger.info("JWT: Token has expired.")
+    except jwt.exceptions.InvalidIssuerError:
+        logger.error("JWT: Invalid issuer.")
+    except jwt.exceptions.InvalidAudienceError:
+        logger.error("JWT: Token is not intended for this application.")
+    except jwt.exceptions.DecodeError:
+        logger.error("JWT error: Invalid token structure (not enough segments).")
+    except jwt.exceptions.PyJWKClientError as e:
+        logger.critical(f"JWT: Could not fetch public keys from ITMO.ID. {e}")
+    except Exception as e:
+        logger.exception(f"Unexpected JWT validation error: {e}")
+
+    return None
 
 
 def get_isu(request: Request) -> int:
