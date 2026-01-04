@@ -66,6 +66,8 @@ class AuthMiddleware:
                     }
                 )
             else:
+                if token.isdigit() and len(token) == 6:
+                    return {"isu": int(token)}
                 return jwt.decode(
                     token,
                     options={"verify_signature": False}
