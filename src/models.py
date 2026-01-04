@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from enum import Enum
+from typing import Annotated
+from fastapi import Query
 
 
 class Subject(BaseModel):
@@ -65,6 +67,14 @@ class TeacherRateResponse(BaseModel):
     user_rating: int
 
 
+class TeacherRateRequest(BaseModel):
+    user_rating: Annotated[int, Query(ge=1, le=5)]
+
+
 class CommentKarmaResponse(BaseModel):
     karma: int
     user_karma: int
+
+
+class CommentKarmaRequest(BaseModel):
+    user_karma: Annotated[int, Query(ge=-1, le=1)]

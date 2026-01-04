@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Query, Depends, HTTPException
-from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException
 
 from src.models import *
 from src.dependencies import get_service, Service
@@ -36,24 +35,24 @@ async def subject(iid: int, isu: int | None = Depends(get_isu),
 
 
 @router.post("/teacher/{iid}/rate", response_model_exclude_none=True)
-async def teacher_rate(iid: int, rating: Annotated[int, Query(ge=1, le=5)],
+async def teacher_rate(iid: int, body: TeacherRateRequest,
                        isu: int | None = Depends(get_isu),
                        service: Service = Depends(get_service)) -> TeacherRateResponse:
     if isu is None:
         raise HTTPException(status_code=401, detail="A 'token' header is required")
-    answer = await service.teacher_rate(isu, iid, rating)
+    answer = await service.teacher_rate(isu, iid, body.user_rating)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Teacher '{iid}' not found")
     return answer.model_dump(exclude_none=True)
 
 
 @router.post("/comment/{iid}/vote", response_model_exclude_none=True)
-async def comment_vote(iid: int, karma: Annotated[int, Query(ge=-1, le=1)],
+async def comment_vote(iid: int, body: CommentKarmaRequest,
                        isu: int | None = Depends(get_isu),
                        service: Service = Depends(get_service)) -> CommentKarmaResponse:
     if isu is None:
         raise HTTPException(status_code=401, detail="A 'token' header is required")
-    answer = await service.comment_vote(isu, iid, karma)
+    answer = await service.comment_vote(isu, iid, body.user_karma)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Comment '{iid}' not found")
     return answer.model_dump(exclude_none=True)
