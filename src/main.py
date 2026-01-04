@@ -17,6 +17,10 @@ conn_str = os.getenv("DATABASE")
 if conn_str is None:
     raise Exception("DATABASE environment variable not set")
 
+# ENV AUTH_VERIFY: bool
+env_str = os.getenv("AUTH_VERIFY", "TRUE")
+auth_verify = env_str in ['true', 'True', 'TRUE', '1']
+
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
@@ -28,7 +32,7 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(AuthMiddleware)
+app.add_middleware(AuthMiddleware, auth_verify=auth_verify)
 
 app.add_middleware(
     CORSMiddleware,
