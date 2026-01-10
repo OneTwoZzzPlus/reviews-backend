@@ -1,7 +1,7 @@
 from src.models import *
 
 
-class Service:
+class ReviewsService:
     def __init__(self, database):
         self.database = database
 

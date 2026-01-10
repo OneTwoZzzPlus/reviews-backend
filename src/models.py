@@ -78,3 +78,17 @@ class CommentKarmaResponse(BaseModel):
 
 class CommentKarmaRequest(BaseModel):
     user_karma: Annotated[int, Query(ge=-1, le=1)]
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class TokenResponse(BaseModel):
+    refresh_token: str
+    access_token: str

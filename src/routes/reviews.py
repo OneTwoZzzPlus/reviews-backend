@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models import *
-from src.dependencies import get_service, Service
+from src.dependencies import get_reviews_service, ReviewsService
 from src.auth import token_header, get_isu
 
 router = APIRouter(dependencies=[Depends(token_header)])
@@ -9,7 +9,7 @@ router = APIRouter(dependencies=[Depends(token_header)])
 
 @router.get("/search", response_model_exclude_none=True)
 async def search(query: Annotated[str | None, Query(min_length=3)],
-                 service: Service = Depends(get_service)) -> SearchResponse:
+                 service: ReviewsService = Depends(get_reviews_service)) -> SearchResponse:
     answer = await service.search(query)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Nothing was found for the query '{query}'")
@@ -18,7 +18,7 @@ async def search(query: Annotated[str | None, Query(min_length=3)],
 
 @router.get("/teacher/{iid}", response_model_exclude_none=True)
 async def teacher(iid: int, isu: int | None = Depends(get_isu),
-                  service: Service = Depends(get_service)) -> TeacherResponse:
+                  service: ReviewsService = Depends(get_reviews_service)) -> TeacherResponse:
     answer = await service.teacher(iid, isu)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Teacher '{iid}' not found")
@@ -27,7 +27,7 @@ async def teacher(iid: int, isu: int | None = Depends(get_isu),
 
 @router.get("/subject/{iid}", response_model_exclude_none=True)
 async def subject(iid: int, isu: int | None = Depends(get_isu),
-                  service: Service = Depends(get_service)) -> SubjectResponse:
+                  service: ReviewsService = Depends(get_reviews_service)) -> SubjectResponse:
     answer = await service.subject(iid, isu)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Subject '{iid}' not found")
@@ -37,7 +37,7 @@ async def subject(iid: int, isu: int | None = Depends(get_isu),
 @router.post("/teacher/{iid}/rate", response_model_exclude_none=True)
 async def teacher_rate(iid: int, body: TeacherRateRequest,
                        isu: int | None = Depends(get_isu),
-                       service: Service = Depends(get_service)) -> TeacherRateResponse:
+                       service: ReviewsService = Depends(get_reviews_service)) -> TeacherRateResponse:
     if isu is None:
         raise HTTPException(status_code=401, detail="A 'token' header is required")
     answer = await service.teacher_rate(isu, iid, body.user_rating)
@@ -49,7 +49,7 @@ async def teacher_rate(iid: int, body: TeacherRateRequest,
 @router.post("/comment/{iid}/vote", response_model_exclude_none=True)
 async def comment_vote(iid: int, body: CommentKarmaRequest,
                        isu: int | None = Depends(get_isu),
-                       service: Service = Depends(get_service)) -> CommentKarmaResponse:
+                       service: ReviewsService = Depends(get_reviews_service)) -> CommentKarmaResponse:
     if isu is None:
         raise HTTPException(status_code=401, detail="A 'token' header is required")
     answer = await service.comment_vote(isu, iid, body.user_karma)
