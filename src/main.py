@@ -1,16 +1,14 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from src.postgres import Postgres
+from src.database.postgres import Postgres
 from src.auth import AuthMiddleware
-from src.routes import router as main_router
-from src.content import root_html
+from src.routes.reviews import router as reviews_router
+from src.routes.auxiliary import router as auxiliary_router
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 # ENV DATABASE="postgresql://user:password@localhost:port/db_name"
 conn_str = os.getenv("DATABASE")
@@ -42,14 +40,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(main_router)
-
-
-@app.get("/favicon.ico", response_class=FileResponse)
-async def favicon():
-    return FileResponse(STATIC_DIR / "favicon.ico")
-
-
-@app.get("/", response_class=HTMLResponse)
-def root():
-    return HTMLResponse(content=root_html, status_code=200)
+app.include_router(reviews_router)
+app.include_router(auxiliary_router)

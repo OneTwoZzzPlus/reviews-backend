@@ -1,6 +1,5 @@
 from fastapi import Request
-
-from src.service import Service
+from src.services.reviews import Service
 
 
 def get_database(request: Request) -> Service:
@@ -8,4 +7,4 @@ def get_database(request: Request) -> Service:
 
 
 def get_service(request: Request) -> Service:
-    return Service(database=request.app.state.database)
+    return Service(database=get_database(request))
