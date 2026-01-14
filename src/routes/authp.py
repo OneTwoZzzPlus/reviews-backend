@@ -10,7 +10,7 @@ router = APIRouter(prefix="/authp")
 async def login(body: LoginRequest, service=Depends(get_authp_service)) -> TokenResponse:
     try:
         return await service.login(body.username, body.password)
-    except service.InvalidCredentialsException:
+    except service.InvalidCredentials:
         raise HTTPException(status_code=401, detail="Invalid Credentials")
     except service.MainException as e:
         raise HTTPException(status_code=502, detail=str(e))
