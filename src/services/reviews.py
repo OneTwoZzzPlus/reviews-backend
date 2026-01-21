@@ -5,8 +5,8 @@ class ReviewsService:
     def __init__(self, database):
         self.database = database
 
-    async def search(self, query: str) -> SearchResponse:
-        return await self.database.select_search(query)
+    async def search(self, query: str, strainer: str | None) -> SearchResponse:
+        return await self.database.select_search(query, strainer)
 
     async def teacher(self, iid: int, isu: int | None = None) -> TeacherResponse:
         return await self.database.select_teacher(iid, 0 if isu is None else isu)

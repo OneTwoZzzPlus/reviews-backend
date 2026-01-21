@@ -8,9 +8,10 @@ router = APIRouter(dependencies=[Depends(token_header)])
 
 
 @router.get("/search", response_model_exclude_none=True)
-async def search(query: Annotated[str | None, Query(min_length=3)],
+async def search(query: Annotated[str, Query(min_length=3)],
+                 strainer: SearchType | None = None,
                  service: ReviewsService = Depends(get_reviews_service)) -> SearchResponse:
-    answer = await service.search(query)
+    answer = await service.search(query, strainer)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Nothing was found for the query '{query}'")
     return answer.model_dump(exclude_none=True)

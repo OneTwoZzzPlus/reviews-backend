@@ -20,17 +20,23 @@ class Postgres:
     async def disconnect(self):
         await self.pool.close()
 
-    async def select_search(self, query: str) -> SearchResponse:
+    async def select_search(self, query: str, strainer: str | None) -> SearchResponse:
         async with self.pool.acquire() as conn:
-            teachers = await conn.fetch("SELECT id, name FROM public.teacher WHERE name ILIKE $1;", f"%{query}%")
-            subjects = await conn.fetch("SELECT id, title FROM public.subject WHERE title ILIKE $1;", f"%{query}%")
             results = []
-            for s in subjects:
-                results.append(SearchItem(id=s["id"], title=s["title"], type=SearchType.subject))
-            for t in teachers:
-                results.append(SearchItem(id=t["id"], title=t["name"], type=SearchType.teacher))
+
+            if strainer is None or strainer == SearchType.teacher:
+                teachers = await conn.fetch("SELECT id, name FROM public.teacher WHERE name ILIKE $1;", f"%{query}%")
+                for t in teachers:
+                    results.append(SearchItem(id=t["id"], title=t["name"], type=SearchType.teacher))
+
+            if strainer is None or strainer == SearchType.subject:
+                subjects = await conn.fetch("SELECT id, title FROM public.subject WHERE title ILIKE $1;", f"%{query}%")
+                for s in subjects:
+                    results.append(SearchItem(id=s["id"], title=s["title"], type=SearchType.subject))
+
             if results:
                 return SearchResponse(results=results)
+
         return None
 
     async def select_teacher(self, t_id: int, isu: int = 0) -> TeacherResponse:
