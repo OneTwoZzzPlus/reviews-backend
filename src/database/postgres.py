@@ -247,17 +247,61 @@ class Postgres:
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING id;
                 """,
-                SuggestionStatus.check,
+                SuggestionStatus.delayed,
                 user_isu,
-                data.comment,
+                data.text,
                 data.teacher.id,
                 data.teacher.title,
                 data.subject.id,
                 data.subject.title,
-                ';'.join(['' if x is None else str(x.id) for x in data.subs]),
-                ';'.join(['' if x is None else x.title.replace(';', '') for x in data.subs])
+                ';'.join(['' if x.id is None else str(x.id) for x in data.subs]),
+                ';'.join(['' if x.title is None else x.title.replace(';', '') for x in data.subs])
             )
             return suggestion_id
+
+    async def select_suggestions(self, delayed: bool, accepted: bool, rejected: bool) -> SuggestionListResponse:
+        async with self.pool.acquire() as conn:
+            statuses = []
+            if delayed:
+                statuses.append(SuggestionStatus.delayed)
+            if accepted:
+                statuses.append(SuggestionStatus.accepted)
+            if rejected:
+                statuses.append(SuggestionStatus.rejected)
+            rows = await conn.fetch("""
+                SELECT 
+                id, status, teacher_title
+                FROM public.suggestion
+                WHERE status = ANY($1::text[]);
+                """, [s.name for s in statuses])
+            return SuggestionListResponse(items=[
+                SuggestionItem(id=r['id'], status=r['status'], title=r['teacher_title'])
+                for r in rows
+            ])
+
+    async def select_suggestion(self, iid: int) -> SuggestionResponse | None:
+        async with self.pool.acquire() as conn:
+            r = await conn.fetchrow("""
+                SELECT 
+                id, status, user_isu, moderator_isu, text, 
+                teacher_id, teacher_title, subject_id, subject_title, 
+                subs_id, subs_title, comment_id
+                FROM public.suggestion
+                WHERE id = $1;
+                """, iid)
+            if r is None:
+                return None
+            return SuggestionResponse(
+                id=r['id'], status=r['status'], user_isu=r['user_isu'], moderator_isu=r['moderator_isu'],
+                text=r['text'],
+                teacher=InputItem(id=r['teacher_id'], title=r['teacher_title']),
+                subject=InputItem(id=r['subject_id'], title=r['subject_title']),
+                subs=[
+                    InputItem(id=None if x_id == '' else int(x_id), title=x_title)
+                    for x_id, x_title in zip(r['subs_id'].split(';'), r['subs_title'].split(';'))
+                ],
+                comment_id=r['comment_id']
+            )
 
     async def select_moderators(self):
         async with self.pool.acquire() as conn:

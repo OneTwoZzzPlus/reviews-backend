@@ -22,3 +22,9 @@ class ReviewsService:
 
     async def add_suggestion(self, isu: int | None, data: SuggestionAddRequest) -> int:
         return await self.database.insert_suggestion(isu, data)
+
+    async def list_suggestion(self, delayed=True, accepted=False, rejected=False) -> SuggestionListResponse:
+        return await self.database.select_suggestions(delayed, accepted, rejected)
+
+    async def get_suggestion(self, iid: int) -> SuggestionListResponse | None:
+        return await self.database.select_suggestion(iid)

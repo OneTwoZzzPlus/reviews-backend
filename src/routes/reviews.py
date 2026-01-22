@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models import *
-from src.dependencies import get_reviews_service, ReviewsService
+from src.dependencies import get_reviews_service, ReviewsService, get_moderator_service, ModeratorService
 from src.auth import token_header, get_isu
 
 router = APIRouter(dependencies=[Depends(token_header)])
@@ -84,26 +84,24 @@ async def suggestion(body: SuggestionAddRequest,
     return SuggestionAddResponse(id=answer)
 
 
-@router.get("/suggestion", status_code=200)
-async def suggestion(body: SuggestionAddRequest,
-                     isu: int | None = Depends(get_isu),
-                     service: ReviewsService = Depends(get_reviews_service)) -> SuggestionAddResponse:
+@router.get("/suggestion", response_model_exclude_none=True)
+async def suggestion_list(isu: int | None = Depends(get_isu),
+                          mod: ModeratorService = Depends(get_moderator_service),
+                          service: ReviewsService = Depends(get_reviews_service)) -> SuggestionListResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.list_suggestion()
+    return answer.model_dump(exclude_none=True)
 
-    if body.teacher.id is None and body.teacher.title is None:
-        raise HTTPException(
-            status_code=400,
-            detail='The "teacher" field requires either an "id" (for existing) or a "title" (for new).'
-        )
-    if body.subject.id is None and body.subject.title is None:
-        raise HTTPException(
-            status_code=400,
-            detail='The "subject" field requires either an "id" (for existing) or a "title" (for new).'
-        )
-    for sub in body.subs:
-        if sub.id is None and sub.title is None:
-            raise HTTPException(
-                status_code=400,
-                detail='Items in the "subs" field require either an "id" (for existing) or a "title" (for new).'
-            )
-    answer = await service.add_suggestion(isu, body)
-    return SuggestionAddResponse(id=answer)
+
+@router.get("/suggestion/{iid}", response_model_exclude_none=True)
+async def suggestion_get(iid: int,
+                         isu: int | None = Depends(get_isu),
+                         mod: ModeratorService = Depends(get_moderator_service),
+                         service: ReviewsService = Depends(get_reviews_service)) -> SuggestionResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.get_suggestion(iid)
+    if answer is None:
+        raise HTTPException(status_code=404, detail=f"Suggestion '{iid}' not found")
+    return answer.model_dump(exclude_none=True)

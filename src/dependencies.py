@@ -4,6 +4,9 @@ from src.services.moderator import ModeratorService
 from src.services.authp import AuthItmoIdService
 
 
+moderator_service = None
+
+
 def get_database(request: Request) -> ReviewsService:
     return request.app.state.database
 

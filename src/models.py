@@ -104,7 +104,6 @@ class InputItem(BaseModel):
 
 
 class SuggestionStatus(str, Enum):
-    check = 'check'
     delayed = 'delayed'
     accepted = 'accepted'
     rejected = 'rejected'
@@ -114,8 +113,30 @@ class SuggestionAddRequest(BaseModel):
     teacher: InputItem
     subject: InputItem
     subs: list[InputItem]
-    comment: str
+    text: str
 
 
 class SuggestionAddResponse(BaseModel):
     id: int
+
+
+class SuggestionResponse(BaseModel):
+    id: int
+    status: SuggestionStatus
+    user_isu: int | None = None
+    moderator_isu: int | None = None
+    text: str
+    teacher: InputItem
+    subject: InputItem
+    subs: list[InputItem]
+    comment_id: int | None = None
+
+
+class SuggestionItem(BaseModel):
+    id: int
+    status: SuggestionStatus
+    title: str
+
+
+class SuggestionListResponse(BaseModel):
+    items: list[SuggestionItem]
