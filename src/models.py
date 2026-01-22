@@ -92,3 +92,30 @@ class RefreshRequest(BaseModel):
 class TokenResponse(BaseModel):
     refresh_token: str
     access_token: str
+
+
+class ModeratorResponse(BaseModel):
+    access: bool
+
+
+class InputItem(BaseModel):
+    id: int | None = None
+    title: str | None = None
+
+
+class SuggestionStatus(str, Enum):
+    check = 'check'
+    delayed = 'delayed'
+    accepted = 'accepted'
+    rejected = 'rejected'
+
+
+class SuggestionAddRequest(BaseModel):
+    teacher: InputItem
+    subject: InputItem
+    subs: list[InputItem]
+    comment: str
+
+
+class SuggestionAddResponse(BaseModel):
+    id: int

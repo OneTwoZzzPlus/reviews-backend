@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from src.database.postgres import Postgres
 from src.auth import AuthMiddleware
 from src.routes.reviews import router as reviews_router
+from src.routes.moderator import router as moderator_router
 from src.routes.auxiliary import router as auxiliary_router
 from src.routes.authp import router as authp_router
 
@@ -43,4 +44,5 @@ app.add_middleware(
 
 app.include_router(reviews_router)
 app.include_router(authp_router)
+app.include_router(moderator_router)
 app.include_router(auxiliary_router)

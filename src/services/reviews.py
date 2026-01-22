@@ -19,3 +19,6 @@ class ReviewsService:
 
     async def comment_vote(self, isu: int, iid: int, karma: int) -> CommentKarmaResponse:
         return await self.database.upsert_comment_karma(isu, iid, karma)
+
+    async def add_suggestion(self, isu: int | None, data: SuggestionAddRequest) -> int:
+        return await self.database.insert_suggestion(isu, data)

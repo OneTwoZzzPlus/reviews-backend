@@ -57,3 +57,53 @@ async def comment_vote(iid: int, body: CommentKarmaRequest,
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Comment '{iid}' not found")
     return answer.model_dump(exclude_none=True)
+
+
+@router.post("/suggestion", status_code=202)
+async def suggestion(body: SuggestionAddRequest,
+                     isu: int | None = Depends(get_isu),
+                     service: ReviewsService = Depends(get_reviews_service)) -> SuggestionAddResponse:
+
+    if body.teacher.id is None and body.teacher.title is None:
+        raise HTTPException(
+            status_code=400,
+            detail='The "teacher" field requires either an "id" (for existing) or a "title" (for new).'
+        )
+    if body.subject.id is None and body.subject.title is None:
+        raise HTTPException(
+            status_code=400,
+            detail='The "subject" field requires either an "id" (for existing) or a "title" (for new).'
+        )
+    for sub in body.subs:
+        if sub.id is None and sub.title is None:
+            raise HTTPException(
+                status_code=400,
+                detail='Items in the "subs" field require either an "id" (for existing) or a "title" (for new).'
+            )
+    answer = await service.add_suggestion(isu, body)
+    return SuggestionAddResponse(id=answer)
+
+
+@router.get("/suggestion", status_code=200)
+async def suggestion(body: SuggestionAddRequest,
+                     isu: int | None = Depends(get_isu),
+                     service: ReviewsService = Depends(get_reviews_service)) -> SuggestionAddResponse:
+
+    if body.teacher.id is None and body.teacher.title is None:
+        raise HTTPException(
+            status_code=400,
+            detail='The "teacher" field requires either an "id" (for existing) or a "title" (for new).'
+        )
+    if body.subject.id is None and body.subject.title is None:
+        raise HTTPException(
+            status_code=400,
+            detail='The "subject" field requires either an "id" (for existing) or a "title" (for new).'
+        )
+    for sub in body.subs:
+        if sub.id is None and sub.title is None:
+            raise HTTPException(
+                status_code=400,
+                detail='Items in the "subs" field require either an "id" (for existing) or a "title" (for new).'
+            )
+    answer = await service.add_suggestion(isu, body)
+    return SuggestionAddResponse(id=answer)

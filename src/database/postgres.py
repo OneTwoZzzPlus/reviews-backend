@@ -1,4 +1,4 @@
-from logging import raiseExceptions
+from os import access
 
 import asyncpg
 from asyncpg.exceptions import ForeignKeyViolationError
@@ -236,3 +236,30 @@ class Postgres:
             except ForeignKeyViolationError:
                 print(e)
                 return None
+
+    async def insert_suggestion(self, user_isu: int | None, data: SuggestionAddRequest) -> bool:
+        async with self.pool.acquire() as conn:
+            suggestion_id = await conn.fetchval(
+                """
+                INSERT INTO public.suggestion(
+                    status, user_isu, text, teacher_id, teacher_title, 
+                    subject_id, subject_title, subs_id, subs_title)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                RETURNING id;
+                """,
+                SuggestionStatus.check,
+                user_isu,
+                data.comment,
+                data.teacher.id,
+                data.teacher.title,
+                data.subject.id,
+                data.subject.title,
+                ';'.join(['' if x is None else str(x.id) for x in data.subs]),
+                ';'.join(['' if x is None else x.title.replace(';', '') for x in data.subs])
+            )
+            return suggestion_id
+
+    async def select_moderators(self):
+        async with self.pool.acquire() as conn:
+            mods = await conn.fetch("SELECT * FROM public.moderator WHERE access = TRUE;")
+            return {int(m['isu']): None for m in mods}
