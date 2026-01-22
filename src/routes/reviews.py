@@ -81,7 +81,7 @@ async def suggestion(body: SuggestionAddRequest,
                 detail='Items in the "subs" field require either an "id" (for existing) or a "title" (for new).'
             )
     answer = await service.add_suggestion(isu, body)
-    return SuggestionAddResponse(id=answer)
+    return answer
 
 
 @router.get("/suggestion", response_model_exclude_none=True)
@@ -102,6 +102,32 @@ async def suggestion_get(iid: int,
     if not await mod.have_access(isu):
         raise HTTPException(status_code=403, detail="You aren't in the moderator list")
     answer = await service.get_suggestion(iid)
+    if answer is None:
+        raise HTTPException(status_code=404, detail=f"Suggestion '{iid}' not found")
+    return answer.model_dump(exclude_none=True)
+
+
+@router.post("/suggestion/{iid}/commit", response_model_exclude_none=True, status_code=201)
+async def suggestion_commit(iid: int, body: SuggestionCommitRequest,
+                            isu: int | None = Depends(get_isu),
+                            mod: ModeratorService = Depends(get_moderator_service),
+                            service: ReviewsService = Depends(get_reviews_service)) -> SuggestionCommitResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.commit_suggestion(isu, iid, body)
+    if answer is None:
+        raise HTTPException(status_code=404, detail=f"Suggestion '{iid}' not found")
+    return answer.model_dump(exclude_none=True)
+
+
+@router.post("/suggestion/{iid}/cancel", response_model_exclude_none=True)
+async def suggestion_cancel(iid: int, body: SuggestionCancelRequest,
+                            isu: int | None = Depends(get_isu),
+                            mod: ModeratorService = Depends(get_moderator_service),
+                            service: ReviewsService = Depends(get_reviews_service)) -> SuggestionCancelResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.cancel_suggestion(isu, iid, body)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Suggestion '{iid}' not found")
     return answer.model_dump(exclude_none=True)

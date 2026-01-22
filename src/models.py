@@ -140,3 +140,27 @@ class SuggestionItem(BaseModel):
 
 class SuggestionListResponse(BaseModel):
     items: list[SuggestionItem]
+
+
+class CommitedItem(BaseModel):
+    id: int | None = None
+    title: str | None = None
+
+
+class SuggestionCommitRequest(BaseModel):
+    teacher: CommitedItem
+    subject: CommitedItem
+    subs: list[CommitedItem]
+    text: str
+
+
+class SuggestionCommitResponse(BaseModel):
+    comment_id: int | None = None
+
+
+class SuggestionCancelRequest(BaseModel):
+    status: SuggestionStatus
+
+
+class SuggestionCancelResponse(BaseModel):
+    status: SuggestionStatus

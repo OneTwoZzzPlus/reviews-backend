@@ -181,7 +181,7 @@ class Postgres:
             teachers=list(teachers.values()),
         )
 
-    async def upsert_teacher_rating(self, isu: int, t_id: int, user_rating: int) -> bool:
+    async def upsert_teacher_rating(self, isu: int, t_id: int, user_rating: int) -> TeacherRateResponse:
         async with self.pool.acquire() as conn:
             try:
                 await conn.execute("""
@@ -209,7 +209,7 @@ class Postgres:
                 print(e)
                 return None
 
-    async def upsert_comment_karma(self, isu: int, c_id: int, user_karma: int) -> bool:
+    async def upsert_comment_karma(self, isu: int, c_id: int, user_karma: int) -> CommentKarmaResponse:
         async with self.pool.acquire() as conn:
             try:
                 await conn.execute("""
@@ -279,7 +279,7 @@ class Postgres:
                 for r in rows
             ])
 
-    async def select_suggestion(self, iid: int) -> SuggestionResponse | None:
+    async def select_suggestion(self, iid: int) -> SuggestionResponse:
         async with self.pool.acquire() as conn:
             r = await conn.fetchrow("""
                 SELECT 
@@ -302,6 +302,47 @@ class Postgres:
                 ],
                 comment_id=r['comment_id']
             )
+
+    async def update_suggestion_status(self, moderator_isu: int,
+                                       iid: int, status: SuggestionStatus) -> SuggestionCancelResponse:
+        async with self.pool.acquire() as conn:
+            try:
+                await conn.execute("""
+                    UPDATE public.suggestion 
+                    SET status=$1, moderator_isu=$2
+                    WHERE id=$3;
+                    """, status, moderator_isu, iid)
+                return SuggestionCancelResponse(status=status)
+            except ForeignKeyViolationError:
+                print(e)
+                return None
+
+    async def commit_suggestion(self, moderator_isu: int,
+                                iid: int, data: SuggestionCommitRequest, date: str) -> SuggestionCommitResponse:
+        async with self.pool.acquire() as conn:
+            try:
+                async with conn.transaction():
+                    comment_id = await conn.fetchval("""
+                        INSERT INTO public.comment(
+                        date, text, source_id, subject_id, teacher_id)
+                        VALUES ($1, $2, $3, $4, $5)
+                        RETURNING id;
+                        """, date, data.text, 1, data.subject.id, data.teacher.id)
+                    for s in data.subs:
+                        await conn.execute("""
+                            INSERT INTO public.relationst(subject_id, teacher_id)
+                            VALUES ($1, $2) 
+                            ON CONFLICT DO NOTHING;
+                            """, s.id, data.teacher.id)
+                    await conn.execute("""
+                        UPDATE public.suggestion 
+                        SET status=$1, moderator_isu=$2, comment_id=$4
+                        WHERE id=$3;
+                        """, SuggestionStatus.accepted, moderator_isu, iid, comment_id)
+                    return SuggestionCommitResponse(comment_id=comment_id)
+            except ForeignKeyViolationError:
+                print(e)
+                return None
 
     async def select_moderators(self):
         async with self.pool.acquire() as conn:
