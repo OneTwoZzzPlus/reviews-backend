@@ -107,6 +107,7 @@ class SuggestionStatus(str, Enum):
     delayed = 'delayed'
     accepted = 'accepted'
     rejected = 'rejected'
+    spam = 'spam'
 
 
 class SuggestionAddRequest(BaseModel):
@@ -159,7 +160,7 @@ class SuggestionCommitResponse(BaseModel):
 
 
 class SuggestionCancelRequest(BaseModel):
-    status: SuggestionStatus
+    status: SuggestionStatus = SuggestionStatus.rejected
 
 
 class SuggestionCancelResponse(BaseModel):
