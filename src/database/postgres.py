@@ -237,14 +237,14 @@ class Postgres:
                 print(e)
                 return None
 
-    async def insert_suggestion(self, user_isu: int | None, data: SuggestionAddRequest) -> bool:
+    async def insert_suggestion(self, user_isu: int | None, data: SuggestionAddRequest, date: str) -> int:
         async with self.pool.acquire() as conn:
             suggestion_id = await conn.fetchval(
                 """
                 INSERT INTO public.suggestion(
                     status, user_isu, text, teacher_id, teacher_title, 
-                    subject_id, subject_title, subs_id, subs_title)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    subject_id, subject_title, subs_id, subs_title, date)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 RETURNING id;
                 """,
                 SuggestionStatus.delayed,
@@ -254,8 +254,11 @@ class Postgres:
                 data.teacher.title,
                 data.subject.id,
                 data.subject.title,
-                ';'.join(['' if x.id is None else str(x.id) for x in data.subs]),
-                ';'.join(['' if x.title is None else x.title.replace(';', '') for x in data.subs])
+                ';'.join(['' if x.id is None else str(x.id) for x in data.subs]) if data.subs else None,
+                ';'.join(
+                    ['' if x.title is None else x.title.replace(';', '') for x in data.subs]
+                ) if data.subs else None,
+                date
             )
             return suggestion_id
 
@@ -296,7 +299,7 @@ class Postgres:
                 text=r['text'],
                 teacher=InputItem(id=r['teacher_id'], title=r['teacher_title']),
                 subject=InputItem(id=r['subject_id'], title=r['subject_title']),
-                subs=[
+                subs=[] if r['subs_id'] is None else [
                     InputItem(id=None if x_id == '' else int(x_id), title=x_title)
                     for x_id, x_title in zip(r['subs_id'].split(';'), r['subs_title'].split(';'))
                 ],
@@ -318,16 +321,21 @@ class Postgres:
                 return None
 
     async def commit_suggestion(self, moderator_isu: int,
-                                iid: int, data: SuggestionCommitRequest, date: str) -> SuggestionCommitResponse:
+                                iid: int, data: SuggestionCommitRequest) -> SuggestionCommitResponse:
         async with self.pool.acquire() as conn:
             try:
                 async with conn.transaction():
+                    sug = await conn.fetchval("""
+                        SELECT date 
+                        FROM public.suggestion
+                        WHERE id = $1;
+                        """, iid)
                     comment_id = await conn.fetchval("""
                         INSERT INTO public.comment(
                         date, text, source_id, subject_id, teacher_id)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id;
-                        """, date, data.text, 1, data.subject.id, data.teacher.id)
+                        """, sug, data.text, 1, data.subject.id, data.teacher.id)
                     for s in data.subs:
                         await conn.execute("""
                             INSERT INTO public.relationst(subject_id, teacher_id)

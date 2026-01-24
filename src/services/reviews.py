@@ -28,7 +28,7 @@ class ReviewsService:
         return await self.database.upsert_comment_karma(isu, iid, karma)
 
     async def add_suggestion(self, isu: int | None, data: SuggestionAddRequest) -> SuggestionAddResponse:
-        return SuggestionAddResponse(id=await self.database.insert_suggestion(isu, data))
+        return SuggestionAddResponse(id=await self.database.insert_suggestion(isu, data, get_current_time()))
 
     async def list_suggestion(self, delayed=True, accepted=False, rejected=False) -> SuggestionListResponse:
         return await self.database.select_suggestions(delayed, accepted, rejected)
@@ -37,7 +37,7 @@ class ReviewsService:
         return await self.database.select_suggestion(iid)
 
     async def commit_suggestion(self, isu: int, iid: int, body: SuggestionCommitRequest) -> SuggestionCommitResponse:
-        return await self.database.commit_suggestion(isu, iid, body, get_current_time())
+        return await self.database.commit_suggestion(isu, iid, body)
 
     async def cancel_suggestion(self, isu: int, iid: int, body: SuggestionCancelRequest) -> SuggestionCancelResponse:
         return await self.database.update_suggestion_status(isu, iid, body.status)
