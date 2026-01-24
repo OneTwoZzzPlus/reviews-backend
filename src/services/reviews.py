@@ -5,7 +5,7 @@ def get_current_time():
     from datetime import datetime, timezone, timedelta
     utc_plus_3 = timezone(timedelta(hours=3))
     current_time = datetime.now(timezone.utc).astimezone(utc_plus_3)
-    return current_time.strftime("%H:%M %d:%m:%Y")
+    return current_time.strftime("%H:%M %d.%m.%Y")
 
 
 class ReviewsService:
