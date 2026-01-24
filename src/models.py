@@ -19,7 +19,7 @@ class Teacher(BaseModel):
 class Source(BaseModel):
     id: int | None = None
     title: str
-    link: str
+    link: str | None = None
 
 
 class Comment(BaseModel):
