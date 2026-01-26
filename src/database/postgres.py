@@ -336,7 +336,7 @@ class Postgres:
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id;
                         """, sug, data.text, 1, data.subject.id, data.teacher.id)
-                    for s in data.subs:
+                    for s in data.subs + [data.subject]:
                         await conn.execute("""
                             INSERT INTO public.relationst(subject_id, teacher_id)
                             VALUES ($1, $2) 
