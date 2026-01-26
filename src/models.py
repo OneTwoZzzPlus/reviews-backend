@@ -144,8 +144,8 @@ class SuggestionListResponse(BaseModel):
 
 
 class CommitedItem(BaseModel):
-    id: int | None = None
-    title: str | None = None
+    id: int
+    title: str
 
 
 class SuggestionCommitRequest(BaseModel):
