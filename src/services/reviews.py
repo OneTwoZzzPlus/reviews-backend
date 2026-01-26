@@ -42,4 +42,11 @@ class ReviewsService:
     async def cancel_suggestion(self, isu: int, iid: int, body: SuggestionCancelRequest) -> SuggestionCancelResponse:
         return await self.database.update_suggestion_status(isu, iid, body.status)
 
+    async def upsert_teacher(self, data: TeacherUpdateRequest) -> TeacherUpdateResponse:
+        return await self.database.upsert_teacher(data)
 
+    async def upsert_subject(self, data: SubjectUpdateRequest) -> SubjectUpdateResponse:
+        return await self.database.upsert_subject(data)
+
+    async def add_comment(self, data: CommentAddRequest) -> CommentAddResponse:
+        return await self.database.insert_comment(data)

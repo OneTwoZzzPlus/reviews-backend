@@ -1,5 +1,3 @@
-from os import access
-
 import asyncpg
 from asyncpg.exceptions import ForeignKeyViolationError
 
@@ -233,7 +231,7 @@ class Postgres:
                     karma=row["karma"],
                     user_karma=row["user_karma"]
                 )
-            except ForeignKeyViolationError:
+            except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
@@ -316,7 +314,7 @@ class Postgres:
                     WHERE id=$3;
                     """, status, moderator_isu, iid)
                 return SuggestionCancelResponse(status=status)
-            except ForeignKeyViolationError:
+            except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
@@ -348,7 +346,7 @@ class Postgres:
                         WHERE id=$3;
                         """, SuggestionStatus.accepted, moderator_isu, iid, comment_id)
                     return SuggestionCommitResponse(comment_id=comment_id)
-            except ForeignKeyViolationError:
+            except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
@@ -356,3 +354,50 @@ class Postgres:
         async with self.pool.acquire() as conn:
             mods = await conn.fetch("SELECT * FROM public.moderator WHERE access = TRUE;")
             return {int(m['isu']): None for m in mods}
+
+    async def upsert_teacher(self, data: TeacherUpdateRequest) -> TeacherUpdateResponse:
+        async with self.pool.acquire() as conn:
+            isu = await conn.fetchval("""
+                INSERT INTO public.teacher(id, name)
+                VALUES ($1, $2)
+                ON CONFLICT (id) DO UPDATE
+                SET name = $2
+                RETURNING id;
+            """, data.id, data.title)
+            return TeacherUpdateResponse(id=isu)
+
+    async def upsert_subject(self, data: SubjectUpdateRequest) -> SubjectUpdateResponse:
+        async with self.pool.acquire() as conn:
+            if data.id is None:
+                subject_id = await conn.fetchval("""
+                    INSERT INTO public.subject(title)
+                    VALUES ($1)
+                    RETURNING id;
+                """, data.title)
+            else:
+                subject_id = await conn.fetchval("""
+                    INSERT INTO public.subject(id, title)
+                    VALUES ($1, $2)
+                    ON CONFLICT (id) DO UPDATE
+                    SET title = $2
+                    RETURNING id;
+                """, data.id, data.title)
+
+            return SubjectUpdateResponse(id=subject_id)
+
+    async def insert_comment(self, data: CommentAddRequest) -> CommentAddResponse:
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                comment_id = await conn.fetchval("""
+                    INSERT INTO public.comment(
+                    date, text, source_id, subject_id, teacher_id)
+                    VALUES ($1, $2, $3, $4, $5)
+                    RETURNING id;
+                    """, data.date, data.text, data.source_id, data.subject.id, data.teacher.id)
+                for s in data.subs + [data.subject]:
+                    await conn.execute("""
+                        INSERT INTO public.relationst(subject_id, teacher_id)
+                        VALUES ($1, $2) 
+                        ON CONFLICT DO NOTHING;
+                        """, s.id, data.teacher.id)
+                return CommentAddResponse(id=comment_id)

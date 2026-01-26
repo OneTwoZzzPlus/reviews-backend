@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pygments.lexers import data
 
 from src.models import *
 from src.dependencies import get_reviews_service, ReviewsService, get_moderator_service, ModeratorService
@@ -7,7 +8,7 @@ from src.auth import token_header, get_isu
 router = APIRouter(prefix='/mod', dependencies=[Depends(token_header)])
 
 
-@router.get("/")
+@router.get("")
 async def moderator(isu: int | None = Depends(get_isu),
                     mod: ModeratorService = Depends(get_moderator_service)) -> ModeratorResponse:
     if isu is None:
@@ -61,4 +62,37 @@ async def suggestion_cancel(iid: int, body: SuggestionCancelRequest,
     answer = await service.cancel_suggestion(isu, iid, body)
     if answer is None:
         raise HTTPException(status_code=404, detail=f"Suggestion '{iid}' not found")
+    return answer.model_dump(exclude_none=True)
+
+
+@router.post("/comment", response_model_exclude_none=True, status_code=201)
+async def comment_add(body: CommentAddRequest,
+                      isu: int | None = Depends(get_isu),
+                      mod: ModeratorService = Depends(get_moderator_service),
+                      service: ReviewsService = Depends(get_reviews_service)) -> CommentAddResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.add_comment(body)
+    return answer.model_dump(exclude_none=True)
+
+
+@router.post("/teacher", response_model_exclude_none=True, status_code=201)
+async def teacher_upsert(body: TeacherUpdateRequest,
+                         isu: int | None = Depends(get_isu),
+                         mod: ModeratorService = Depends(get_moderator_service),
+                         service: ReviewsService = Depends(get_reviews_service)) -> TeacherUpdateResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.upsert_teacher(body)
+    return answer.model_dump(exclude_none=True)
+
+
+@router.post("/subject", response_model_exclude_none=True, status_code=201)
+async def subject_upsert(body: SubjectUpdateRequest,
+                         isu: int | None = Depends(get_isu),
+                         mod: ModeratorService = Depends(get_moderator_service),
+                         service: ReviewsService = Depends(get_reviews_service)) -> SubjectUpdateResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    answer = await service.upsert_subject(body)
     return answer.model_dump(exclude_none=True)

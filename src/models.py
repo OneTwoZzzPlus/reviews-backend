@@ -165,3 +165,34 @@ class SuggestionCancelRequest(BaseModel):
 
 class SuggestionCancelResponse(BaseModel):
     status: SuggestionStatus
+
+
+class TeacherUpdateRequest(BaseModel):
+    id: int
+    title: str
+
+
+class TeacherUpdateResponse(BaseModel):
+    id: int
+
+
+class SubjectUpdateRequest(BaseModel):
+    id: int | None
+    title: str
+
+
+class SubjectUpdateResponse(BaseModel):
+    id: int
+
+
+class CommentAddRequest(BaseModel):
+    source_id: int
+    date: str
+    teacher: CommitedItem
+    subject: CommitedItem
+    subs: list[CommitedItem]
+    text: str
+
+
+class CommentAddResponse(BaseModel):
+    id: int
