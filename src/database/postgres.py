@@ -2,6 +2,7 @@ import asyncpg
 from asyncpg.exceptions import ForeignKeyViolationError
 
 from src.models import *
+from src.routes.reviews import subject
 
 
 class Postgres:
@@ -14,11 +15,20 @@ class Postgres:
             min_size=1,
             max_size=10
         )
+        await self.reload_cache()
 
     async def disconnect(self):
         await self.pool.close()
 
+    async def reload_cache(self):
+        async with self.pool.acquire() as conn:
+            teachers = await conn.fetch("SELECT id, name FROM public.teacher;")
+            self.teachers = [{"title": t["name"], "id": t["id"]} for t in teachers]
+            subjects = await conn.fetch("SELECT id, title FROM public.subject;")
+            self.subjects = [{"title": s["title"], "id": s["id"]} for s in subjects]
+
     async def select_search(self, query: str, strainer: str | None) -> SearchResponse:
+        """deprecated"""
         async with self.pool.acquire() as conn:
             results = []
 
@@ -364,6 +374,7 @@ class Postgres:
                 SET name = $2
                 RETURNING id;
             """, data.id, data.title)
+            await self.reload_cache()
             return TeacherUpdateResponse(id=isu)
 
     async def upsert_subject(self, data: SubjectUpdateRequest) -> SubjectUpdateResponse:
@@ -382,7 +393,7 @@ class Postgres:
                     SET title = $2
                     RETURNING id;
                 """, data.id, data.title)
-
+            await self.reload_cache()
             return SubjectUpdateResponse(id=subject_id)
 
     async def insert_comment(self, data: CommentAddRequest) -> CommentAddResponse:

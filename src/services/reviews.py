@@ -1,3 +1,5 @@
+from rapidfuzz import process, fuzz
+
 from src.models import *
 
 
@@ -13,7 +15,57 @@ class ReviewsService:
         self.database = database
 
     async def search(self, query: str, strainer: str | None) -> SearchResponse:
-        return await self.database.select_search(query, strainer)
+        cache = {
+            SearchType.teacher: self.database.teachers,
+            SearchType.subject: self.database.subjects
+        }
+        results = []
+
+        categories = [strainer] if strainer else [SearchType.teacher, SearchType.subject]
+        for cat in categories:
+
+            data_source = cache.get(cat, [])
+            if not data_source:
+                continue
+            choices = {i: item["title"] for i, item in enumerate(data_source)}
+
+            matches = process.extract(
+                query,
+                choices,
+                limit=15,
+                scorer=fuzz.partial_ratio
+            )
+
+            cat_results = []
+            for title, score, index in matches:
+                if score > 80:
+                    obj = data_source[index]
+                    cat_results.append({
+                        "id": obj["id"],
+                        "title": obj["title"],
+                        "type": cat,
+                        "score": score
+                    })
+
+            results.extend(cat_results)
+
+        def get_sort_key(item, sort_query):
+            normalized_query = sort_query.lower().strip()
+            title_lower = item["title"].lower()
+            starts_with = 0 if title_lower.startswith(normalized_query) else 1
+            score_part = -(int(item["score"]) // 5)
+            last_name = item["title"].split()[0]
+            return starts_with, score_part, last_name
+
+        results.sort(key=lambda x: get_sort_key(x, query))
+
+        return SearchResponse(results=[
+            SearchItem(
+                id=result["id"],
+                title=result["title"],
+                type=result["type"]
+            ) for result in results
+        ])
 
     async def teacher(self, iid: int, isu: int | None = None) -> TeacherResponse:
         return await self.database.select_teacher(iid, 0 if isu is None else isu)
