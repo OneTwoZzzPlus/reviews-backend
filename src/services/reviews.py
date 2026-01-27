@@ -1,6 +1,20 @@
-from rapidfuzz import process, fuzz
+import re
+from rapidfuzz import fuzz
 
 from src.models import *
+
+
+def normalize(text: str) -> str:
+    if not text:
+        return ""
+
+    text = text.lower()
+    text = text.replace("ё", "е")
+    text = re.sub(r'(.)\1+', r'\1', text)
+    text = re.sub(r"[^а-яa-z0-9\s]", "", text)
+    text = " ".join(text.split())
+
+    return text
 
 
 def get_current_time():
@@ -15,56 +29,57 @@ class ReviewsService:
         self.database = database
 
     async def search(self, query: str, strainer: str | None) -> SearchResponse:
+        normalized_query = normalize(query)
+        if not normalized_query:
+            return SearchResponse(results=[])
+
         cache = {
             SearchType.teacher: self.database.teachers,
             SearchType.subject: self.database.subjects
         }
-        results = []
 
         categories = [strainer] if strainer else [SearchType.teacher, SearchType.subject]
+        raw_results = []
+
         for cat in categories:
-
             data_source = cache.get(cat, [])
-            if not data_source:
-                continue
-            choices = {i: item["title"] for i, item in enumerate(data_source)}
+            for item in data_source:
+                original_title = item["title"]
+                target_text = normalize(original_title)
 
-            matches = process.extract(
-                query,
-                choices,
-                limit=15,
-                scorer=fuzz.partial_ratio
-            )
+                score = 0
+                priority = 3
 
-            cat_results = []
-            for title, score, index in matches:
-                if score > 80:
-                    obj = data_source[index]
-                    cat_results.append({
-                        "id": obj["id"],
-                        "title": obj["title"],
+                if normalized_query in target_text:
+                    score = 100
+                    priority = 1 if target_text.startswith(normalized_query) else 2
+                else:
+                    score = fuzz.partial_ratio(normalized_query, target_text)
+                    priority = 3
+
+                threshold = 75 if priority < 3 else 85
+
+                if score >= threshold:
+                    raw_results.append({
+                        "id": item["id"],
+                        "title": original_title,
                         "type": cat,
-                        "score": score
+                        "score": score,
+                        "priority": priority
                     })
 
-            results.extend(cat_results)
-
-        def get_sort_key(item, sort_query):
-            normalized_query = sort_query.lower().strip()
-            title_lower = item["title"].lower()
-            starts_with = 0 if title_lower.startswith(normalized_query) else 1
-            score_part = -(int(item["score"]) // 5)
-            last_name = item["title"].split()[0]
-            return starts_with, score_part, last_name
-
-        results.sort(key=lambda x: get_sort_key(x, query))
+        raw_results.sort(key=lambda x: (
+            x["priority"],
+            -x["score"],
+            x["title"].split()[0]
+        ))
 
         return SearchResponse(results=[
             SearchItem(
-                id=result["id"],
-                title=result["title"],
-                type=result["type"]
-            ) for result in results
+                id=res["id"],
+                title=res["title"],
+                type=res["type"]
+            ) for res in raw_results[:20]
         ])
 
     async def teacher(self, iid: int, isu: int | None = None) -> TeacherResponse:
