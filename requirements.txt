@@ -3,3 +3,4 @@ uvicorn
 asyncpg
 pyjwt[crypto]
 RapidFuzz
+prometheus-fastapi-instrumentator

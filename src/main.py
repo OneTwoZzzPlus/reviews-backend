@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from contextlib import asynccontextmanager
 
@@ -21,16 +22,21 @@ if conn_str is None:
 env_str = os.getenv("AUTH_VERIFY", "TRUE")
 auth_verify = env_str in ['true', 'True', 'TRUE', '1']
 
+instrumentator = Instrumentator()
+
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     application.state.database = Postgres(conn_str)
     await application.state.database.connect()
+    instrumentator.expose(application)
     yield
     await application.state.database.disconnect()
 
 
 app = FastAPI(lifespan=lifespan)
+
+instrumentator.instrument(app)
 
 app.add_middleware(AuthMiddleware, auth_verify=auth_verify)
 
