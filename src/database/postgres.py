@@ -2,7 +2,6 @@ import asyncpg
 from asyncpg.exceptions import ForeignKeyViolationError
 
 from src.models import *
-from src.routes.reviews import subject
 
 
 class Postgres:
@@ -412,3 +411,18 @@ class Postgres:
                         ON CONFLICT DO NOTHING;
                         """, s.id, data.teacher.id)
                 return CommentAddResponse(id=comment_id)
+
+    async def select_gs_processed(self) -> set:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM gsparser.processed;")
+            return set([r['id'] for r in rows])
+
+    async def insert_gs_suggestion(self, row_id: str, date: str, teacher: str, subject: str, review: str) -> int:
+        async with self.pool.acquire() as conn:
+            suggestion_id = await conn.fetchval("""
+                INSERT INTO public.suggestion(status, source_id, date, teacher_title, subject_title, text)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id;
+                """, SuggestionStatus.delayed, 2, date, teacher, subject, review)
+            await conn.execute("INSERT INTO gsparser.processed(id) VALUES ($1);", row_id)
+            return suggestion_id

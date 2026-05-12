@@ -196,3 +196,7 @@ class CommentAddRequest(BaseModel):
 
 class CommentAddResponse(BaseModel):
     id: int
+
+
+class GSParserResponse(BaseModel):
+    count: int

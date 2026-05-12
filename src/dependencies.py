@@ -2,6 +2,7 @@ from fastapi import Request
 from src.services.reviews import ReviewsService
 from src.services.moderator import ModeratorService
 from src.services.authp import AuthItmoIdService
+from src.services.gsparser import GSParserService
 
 
 moderator_service = None
@@ -17,6 +18,10 @@ def get_reviews_service(request: Request) -> ReviewsService:
 
 def get_moderator_service(request: Request) -> ModeratorService:
     return ModeratorService(database=get_database(request))
+
+
+def get_gsparser_service(request: Request) -> GSParserService:
+    return GSParserService(database=get_database(request))
 
 
 def get_authp_service(request: Request) -> AuthItmoIdService:

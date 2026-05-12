@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pygments.lexers import data
 
 from src.models import *
-from src.dependencies import get_reviews_service, ReviewsService, get_moderator_service, ModeratorService
+from src.dependencies import get_reviews_service, ReviewsService
+from src.dependencies import get_moderator_service, ModeratorService
+from src.dependencies import get_gsparser_service, GSParserService
 from src.auth import token_header, get_isu
 
 router = APIRouter(prefix='/mod', dependencies=[Depends(token_header)])
@@ -96,3 +98,18 @@ async def subject_upsert(body: SubjectUpdateRequest,
         raise HTTPException(status_code=403, detail="You aren't in the moderator list")
     answer = await service.upsert_subject(body)
     return answer.model_dump(exclude_none=True)
+
+
+@router.get("/gsparser", response_model_exclude_none=True)
+async def gsparser(isu: int | None = Depends(get_isu),
+                   mod: ModeratorService = Depends(get_moderator_service),
+                   service: GSParserService = Depends(get_gsparser_service)) -> GSParserResponse:
+    if not await mod.have_access(isu):
+        raise HTTPException(status_code=403, detail="You aren't in the moderator list")
+    try:
+        count = await service.parse()
+        return GSParserResponse(count=count).model_dump(exclude_none=True)
+    except GSParserService.InaccessibleGSheet as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except GSParserService.InvalidGSheet as err:
+        raise HTTPException(status_code=502, detail=str(err))
