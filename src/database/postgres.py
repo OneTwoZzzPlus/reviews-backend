@@ -280,12 +280,12 @@ class Postgres:
                 statuses.append(SuggestionStatus.rejected)
             rows = await conn.fetch("""
                 SELECT 
-                id, status, teacher_title
+                id, status, teacher_title, source_id
                 FROM public.suggestion
                 WHERE status = ANY($1::text[]);
                 """, [s.name for s in statuses])
             return SuggestionListResponse(items=[
-                SuggestionItem(id=r['id'], status=r['status'], title=r['teacher_title'])
+                SuggestionItem(id=r['id'], status=r['status'], title=r['teacher_title'], source_id=r['source_id'])
                 for r in rows
             ])
 
@@ -332,17 +332,17 @@ class Postgres:
         async with self.pool.acquire() as conn:
             try:
                 async with conn.transaction():
-                    sug = await conn.fetchval("""
-                        SELECT date 
+                    row = await conn.fetch("""
+                        SELECT date, source_id 
                         FROM public.suggestion
                         WHERE id = $1;
-                        """, iid)
+                        """, iid)[0]
                     comment_id = await conn.fetchval("""
                         INSERT INTO public.comment(
                         date, text, source_id, subject_id, teacher_id)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id;
-                        """, sug, data.text, 1, data.subject.id, data.teacher.id)
+                        """, row['date'], data.text, row['source_id'], data.subject.id, data.teacher.id)
                     for s in data.subs + [data.subject]:
                         await conn.execute("""
                             INSERT INTO public.relationst(subject_id, teacher_id)

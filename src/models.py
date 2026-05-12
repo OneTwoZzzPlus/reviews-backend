@@ -137,6 +137,7 @@ class SuggestionItem(BaseModel):
     id: int
     status: SuggestionStatus
     title: str
+    source_id: int
 
 
 class SuggestionListResponse(BaseModel):
