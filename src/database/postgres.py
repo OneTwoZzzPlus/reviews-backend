@@ -336,13 +336,13 @@ class Postgres:
                         SELECT date, source_id 
                         FROM public.suggestion
                         WHERE id = $1;
-                        """, iid)[0]
+                        """, iid)
                     comment_id = await conn.fetchval("""
                         INSERT INTO public.comment(
-                        date, text, source_id, subject_id, teacher_id)
+                        date, source_id, text, subject_id, teacher_id)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id;
-                        """, row['date'], data.text, row['source_id'], data.subject.id, data.teacher.id)
+                        """, row[0]['date'], row[0]['source_id'], data.text, data.subject.id, data.teacher.id)
                     for s in data.subs + [data.subject]:
                         await conn.execute("""
                             INSERT INTO public.relationst(subject_id, teacher_id)
