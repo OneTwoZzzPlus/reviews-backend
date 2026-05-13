@@ -8,7 +8,7 @@ router = APIRouter(dependencies=[Depends(token_header)])
 
 
 @router.get("/search", response_model_exclude_none=True)
-async def search(query: Annotated[str, Query(min_length=3)],
+async def search(query: Annotated[str, Query(min_length=2)],
                  strainer: SearchType | None = None,
                  service: ReviewsService = Depends(get_reviews_service)) -> SearchResponse:
     answer = await service.search(query, strainer)
