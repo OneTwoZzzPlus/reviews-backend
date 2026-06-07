@@ -1,0 +1,23 @@
+- name: Install docker packages
+  apt:
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Ensure docker service is enabled
+  service:
+    name: docker
+    state: started
+    enabled: yes
+  become: true
+
+- name: Add users to docker group
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop: "{{ docker_users }}"
+  become: true

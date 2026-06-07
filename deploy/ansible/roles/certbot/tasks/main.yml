@@ -1,0 +1,22 @@
+- name: Install 
+  when: enable_https
+  become: true
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+    update_cache: true
+
+- name: Obtain SSL certificate
+  when: enable_https
+  become: true
+  command: >
+    certbot --nginx
+    -d {{ domain_name }}
+    --non-interactive
+    --agree-tos
+    -m {{ letsencrypt_email }}
+    --redirect
+  args:
+    creates: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"

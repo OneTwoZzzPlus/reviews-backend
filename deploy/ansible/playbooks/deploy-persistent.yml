@@ -1,0 +1,5 @@
+- name: Deploy persistent stack
+  hosts: backend
+
+  roles:
+    - persistent

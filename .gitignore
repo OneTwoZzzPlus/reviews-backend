@@ -1,5 +1,8 @@
+# Temp files
 __pycache__
 .idea
 .venv
-.env*
+
+# Secure files
+.env.prod
 testing

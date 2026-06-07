@@ -1,0 +1,6 @@
+- name: Deploy nginx
+  hosts: backend
+  
+  roles:
+    - nginx
+    - certbot

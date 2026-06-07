@@ -1,0 +1,37 @@
+- name: Create backend directory
+  become: true
+  file:
+    path: /opt/reviews/backend
+    state: directory
+    mode: "0755"
+
+- name: Copy backend compose
+  become: true
+  copy:
+    src: ../../../compose/backend/docker-compose.yml
+    dest: /opt/reviews/backend/docker-compose.yml
+    mode: "0644"
+
+- name: Copy env
+  become: true
+  copy:
+    src: ../../../.env
+    dest: /opt/reviews/backend/.env
+    mode: "0600"
+
+- name: Login to docker registry
+  become: true
+  community.docker.docker_login:
+    registry_url: "{{ docker_registry_url }}"
+    username: "{{ docker_registry_username }}"
+    password: "{{ docker_registry_password }}"
+  when:
+    - (docker_registry_url | default('', true)) | length > 0
+    - (docker_registry_username | default('', true)) | length > 0
+    - (docker_registry_password | default('', true)) | length > 0
+
+- name: Start backend
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/reviews/backend
+    state: present

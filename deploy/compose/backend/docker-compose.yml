@@ -1,0 +1,14 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: backend
+    env_file: .env
+    ports:
+      - "8000:8000"
+    networks:
+      - reviews_network
+    restart: always
+
+networks:
+  reviews_network:
+    external: true
