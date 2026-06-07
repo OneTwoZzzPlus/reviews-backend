@@ -1,4 +1,4 @@
-FROM python:3.15-slim AS builder
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 
-FROM python:3.15-slim AS runner
+FROM python:3.13-slim AS runner
 
 WORKDIR /app
 
