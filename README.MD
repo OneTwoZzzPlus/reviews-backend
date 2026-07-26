@@ -20,9 +20,9 @@
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 
 ## Тестирование
-Неободимо поместить в `.env.dev` все переменные.
+Неободимо поместить в `.env` все переменные.
 ```bash
-uvicorn src.main:app --reload --env-file .env.dev
+uvicorn src.main:app
 ```
 
 ## Автоматическое развертывание

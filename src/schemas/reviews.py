@@ -1,55 +1,50 @@
 from pydantic import BaseModel
-from enum import Enum
 from typing import Annotated
 from fastapi import Query
+from enums import SearchType, SuggestionStatus
 
 
-class Subject(BaseModel):
+class SubjectSchema(BaseModel):
     id: int | None = None
     title: str
 
 
-class Teacher(BaseModel):
+class TeacherSchema(BaseModel):
     id: int
     name: str
     rating: float
     user_rating: int | None = None
 
 
-class Source(BaseModel):
+class SourceSchema(BaseModel):
     id: int | None = None
     title: str
     link: str | None = None
 
 
-class Comment(BaseModel):
+class CommentSchema(BaseModel):
     id: int
     date: str
     text: str
-    subject: Subject
-    source: Source
+    subject: SubjectSchema
+    source: SourceSchema
     karma: int
     user_karma: int | None = None
 
 
-class Summary(BaseModel):
+class SummarySchema(BaseModel):
     id: int | None = None
     title: str
     value: str
 
 
-class TeacherResponse(Teacher):
-    summaries: list[Summary]
-    comments: list[Comment]
+class TeacherResponse(TeacherSchema):
+    summaries: list[SummarySchema]
+    comments: list[CommentSchema]
 
 
-class SubjectResponse(Subject):
+class SubjectResponse(SubjectSchema):
     teachers: list[TeacherResponse]
-
-
-class SearchType(str, Enum):
-    teacher = 'teacher'
-    subject = 'subject'
 
 
 class SearchItem(BaseModel):
@@ -101,13 +96,6 @@ class ModeratorResponse(BaseModel):
 class InputItem(BaseModel):
     id: int | None = None
     title: str | None = None
-
-
-class SuggestionStatus(str, Enum):
-    delayed = 'delayed'
-    accepted = 'accepted'
-    rejected = 'rejected'
-    spam = 'spam'
 
 
 class SuggestionAddRequest(BaseModel):

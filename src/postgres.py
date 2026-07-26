@@ -1,7 +1,7 @@
 import asyncpg
 from asyncpg.exceptions import ForeignKeyViolationError
 
-from src.models import *
+from schemas.reviews import *
 
 
 class Postgres:
@@ -9,11 +9,7 @@ class Postgres:
         self.conn_str = conn_str
 
     async def connect(self):
-        self.pool = await asyncpg.create_pool(
-            self.conn_str,
-            min_size=1,
-            max_size=10
-        )
+        self.pool = await asyncpg.create_pool(self.conn_str, min_size=1, max_size=10)
         await self.reload_cache()
 
     async def disconnect(self):
@@ -32,14 +28,26 @@ class Postgres:
             results = []
 
             if strainer is None or strainer == SearchType.teacher:
-                teachers = await conn.fetch("SELECT id, name FROM public.teacher WHERE name ILIKE $1;", f"%{query}%")
+                teachers = await conn.fetch(
+                    "SELECT id, name FROM public.teacher WHERE name ILIKE $1;",
+                    f"%{query}%",
+                )
                 for t in teachers:
-                    results.append(SearchItem(id=t["id"], title=t["name"], type=SearchType.teacher))
+                    results.append(
+                        SearchItem(id=t["id"], title=t["name"], type=SearchType.teacher)
+                    )
 
             if strainer is None or strainer == SearchType.subject:
-                subjects = await conn.fetch("SELECT id, title FROM public.subject WHERE title ILIKE $1;", f"%{query}%")
+                subjects = await conn.fetch(
+                    "SELECT id, title FROM public.subject WHERE title ILIKE $1;",
+                    f"%{query}%",
+                )
                 for s in subjects:
-                    results.append(SearchItem(id=s["id"], title=s["title"], type=SearchType.subject))
+                    results.append(
+                        SearchItem(
+                            id=s["id"], title=s["title"], type=SearchType.subject
+                        )
+                    )
 
             if results:
                 return SearchResponse(results=results)
@@ -48,7 +56,8 @@ class Postgres:
 
     async def select_teacher(self, t_id: int, isu: int = 0) -> TeacherResponse:
         async with self.pool.acquire() as conn:
-            head = await conn.fetchrow("""
+            head = await conn.fetchrow(
+                """
                 SELECT 
                     t.id   AS id, 
                     t.name AS name,
@@ -58,11 +67,18 @@ class Postgres:
                 LEFT JOIN public.teacher_rating AS tr 
                     ON t.id = tr.teacher_id AND tr.isu = $2
                 WHERE t.id = $1;
-                """, t_id, isu)
+                """,
+                t_id,
+                isu,
+            )
             if not head:
                 return None
-            summaries = await conn.fetch("SELECT id, title, value FROM public.summary WHERE teacher_id = $1;", t_id)
-            comments = await conn.fetch("""
+            summaries = await conn.fetch(
+                "SELECT id, title, value FROM public.summary WHERE teacher_id = $1;",
+                t_id,
+            )
+            comments = await conn.fetch(
+                """
                 SELECT 
                     c.id   AS id,
                     c.date AS date, 
@@ -83,30 +99,44 @@ class Postgres:
                     ON c.id = ck.comment_id AND ck.isu = $2
                 
                 WHERE c.teacher_id = $1;
-                """, t_id, isu)
+                """,
+                t_id,
+                isu,
+            )
 
             return TeacherResponse(
-                id=head["id"], name=head["name"],
+                id=head["id"],
+                name=head["name"],
                 rating=head["rating"],
                 user_rating=head["user_rating"] if isu != 0 else None,
-                summaries=[Summary(title=s["title"], value=s["value"]) for s in summaries],
-                comments=[Comment(
-                    id=c["id"], date=c["date"], text=c["text"],
-                    karma=c["karma"],
-                    user_karma=c["user_karma"] if isu != 0 else None,
-                    source=Source(title=c["source_title"], link=c["source_link"]),
-                    subject=Subject(title=c["subject_title"])
-                ) for c in comments]
+                summaries=[
+                    Summary(title=s["title"], value=s["value"]) for s in summaries
+                ],
+                comments=[
+                    Comment(
+                        id=c["id"],
+                        date=c["date"],
+                        text=c["text"],
+                        karma=c["karma"],
+                        user_karma=c["user_karma"] if isu != 0 else None,
+                        source=Source(title=c["source_title"], link=c["source_link"]),
+                        subject=Subject(title=c["subject_title"]),
+                    )
+                    for c in comments
+                ],
             )
 
     async def select_subject(self, s_id: int, isu: int = 0) -> SubjectResponse:
         async with self.pool.acquire() as conn:
-            subject = await conn.fetchrow("SELECT id, title FROM public.subject WHERE id = $1;", s_id)
+            subject = await conn.fetchrow(
+                "SELECT id, title FROM public.subject WHERE id = $1;", s_id
+            )
 
             if not subject:
                 return None
 
-            teachers_raw = await conn.fetch("""
+            teachers_raw = await conn.fetch(
+                """
                 SELECT 
                     t.id   AS id, 
                     t.name AS name,
@@ -117,23 +147,28 @@ class Postgres:
                 LEFT JOIN public.teacher_rating AS tr 
                     ON t.id = tr.teacher_id AND tr.isu = $2
                 WHERE r.subject_id = $1;
-                """, s_id, isu)
+                """,
+                s_id,
+                isu,
+            )
 
             teacher_ids = [t["id"] for t in teachers_raw]
             if not teacher_ids:
                 return SubjectResponse(
-                    id=subject["id"],
-                    title=subject["title"],
-                    teachers=[]
+                    id=subject["id"], title=subject["title"], teachers=[]
                 )
 
-            summaries = await conn.fetch("""
+            summaries = await conn.fetch(
+                """
                 SELECT id, title, value, teacher_id
                 FROM public.summary
                 WHERE teacher_id = ANY($1);
-                """, teacher_ids)
+                """,
+                teacher_ids,
+            )
 
-            comments = await conn.fetch("""
+            comments = await conn.fetch(
+                """
                 SELECT
                     c.id   AS id,
                     c.date AS date,
@@ -155,15 +190,21 @@ class Postgres:
                 LEFT JOIN public.comment_karma AS ck 
                     ON c.id = ck.comment_id AND ck.isu = $2
                 WHERE c.teacher_id = ANY($1);
-                """, teacher_ids, isu)
+                """,
+                teacher_ids,
+                isu,
+            )
 
         teachers = {
             t["id"]: TeacherResponse(
-                id=t["id"], name=t["name"],
+                id=t["id"],
+                name=t["name"],
                 rating=t["rating"],
                 user_rating=t["user_rating"] if isu != 0 else None,
-                summaries=[], comments=[],
-            ) for t in teachers_raw
+                summaries=[],
+                comments=[],
+            )
+            for t in teachers_raw
         }
 
         for s in summaries:
@@ -174,7 +215,9 @@ class Postgres:
         for c in comments:
             teachers[c["teacher_id"]].comments.append(
                 Comment(
-                    id=c["id"], date=c["date"], text=c["text"],
+                    id=c["id"],
+                    date=c["date"],
+                    text=c["text"],
                     karma=c["karma"],
                     user_karma=c["user_karma"] if isu != 0 else None,
                     source=Source(title=c["source_title"], link=c["source_link"]),
@@ -188,17 +231,25 @@ class Postgres:
             teachers=list(teachers.values()),
         )
 
-    async def upsert_teacher_rating(self, isu: int, t_id: int, user_rating: int) -> TeacherRateResponse:
+    async def upsert_teacher_rating(
+        self, isu: int, t_id: int, user_rating: int
+    ) -> TeacherRateResponse:
         async with self.pool.acquire() as conn:
             try:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO public.teacher_rating (isu, teacher_id, user_rating)
                     VALUES ($1, $2, $3)
                     ON CONFLICT (isu, teacher_id) 
                     DO UPDATE SET user_rating = EXCLUDED.user_rating;
-                    """, isu, t_id, user_rating)
+                    """,
+                    isu,
+                    t_id,
+                    user_rating,
+                )
 
-                row = await conn.fetchrow("""        
+                row = await conn.fetchrow(
+                    """        
                     SELECT
                         public.get_avg_teacher_rating(t.id) AS rating,
                         COALESCE(tr.user_rating, 0) AS user_rating
@@ -206,27 +257,37 @@ class Postgres:
                     LEFT JOIN public.teacher_rating AS tr 
                         ON t.id = tr.teacher_id AND tr.isu = $1
                     WHERE t.id = $2;
-                    """, isu, t_id)
+                    """,
+                    isu,
+                    t_id,
+                )
 
                 return TeacherRateResponse(
-                    rating=row["rating"],
-                    user_rating=row["user_rating"]
+                    rating=row["rating"], user_rating=row["user_rating"]
                 )
             except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
-    async def upsert_comment_karma(self, isu: int, c_id: int, user_karma: int) -> CommentKarmaResponse:
+    async def upsert_comment_karma(
+        self, isu: int, c_id: int, user_karma: int
+    ) -> CommentKarmaResponse:
         async with self.pool.acquire() as conn:
             try:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO public.comment_karma (isu, comment_id, user_karma)
                     VALUES ($1, $2, $3)
                     ON CONFLICT (isu, comment_id) 
                     DO UPDATE SET user_karma = EXCLUDED.user_karma;
-                    """, isu, c_id, user_karma)
+                    """,
+                    isu,
+                    c_id,
+                    user_karma,
+                )
 
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     SELECT
                         public.get_comment_karma(c.id) AS karma,
                         COALESCE(ck.user_karma, 0) AS user_karma
@@ -234,17 +295,21 @@ class Postgres:
                     LEFT JOIN public.comment_karma AS ck 
                         ON c.id = ck.comment_id AND ck.isu = $1
                     WHERE c.id = $2;
-                    """, isu, c_id)
+                    """,
+                    isu,
+                    c_id,
+                )
 
                 return CommentKarmaResponse(
-                    karma=row["karma"],
-                    user_karma=row["user_karma"]
+                    karma=row["karma"], user_karma=row["user_karma"]
                 )
             except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
-    async def insert_suggestion(self, user_isu: int | None, data: SuggestionAddRequest, date: str) -> int:
+    async def insert_suggestion(
+        self, user_isu: int | None, data: SuggestionAddRequest, date: str
+    ) -> int:
         async with self.pool.acquire() as conn:
             suggestion_id = await conn.fetchval(
                 """
@@ -261,15 +326,24 @@ class Postgres:
                 data.teacher.title,
                 data.subject.id,
                 data.subject.title,
-                ';'.join(['' if x.id is None else str(x.id) for x in data.subs]) if data.subs else None,
-                ';'.join(
-                    ['' if x.title is None else x.title.replace(';', '') for x in data.subs]
-                ) if data.subs else None,
-                date
+                ";".join(["" if x.id is None else str(x.id) for x in data.subs])
+                if data.subs
+                else None,
+                ";".join(
+                    [
+                        "" if x.title is None else x.title.replace(";", "")
+                        for x in data.subs
+                    ]
+                )
+                if data.subs
+                else None,
+                date,
             )
             return suggestion_id
 
-    async def select_suggestions(self, delayed: bool, accepted: bool, rejected: bool) -> SuggestionListResponse:
+    async def select_suggestions(
+        self, delayed: bool, accepted: bool, rejected: bool
+    ) -> SuggestionListResponse:
         async with self.pool.acquire() as conn:
             statuses = []
             if delayed:
@@ -278,82 +352,129 @@ class Postgres:
                 statuses.append(SuggestionStatus.accepted)
             if rejected:
                 statuses.append(SuggestionStatus.rejected)
-            rows = await conn.fetch("""
+            rows = await conn.fetch(
+                """
                 SELECT 
                 id, status, teacher_title, source_id
                 FROM public.suggestion
                 WHERE status = ANY($1::text[]);
-                """, [s.name for s in statuses])
-            return SuggestionListResponse(items=[
-                SuggestionItem(id=r['id'], status=r['status'], title=r['teacher_title'], source_id=r['source_id'])
-                for r in rows
-            ])
+                """,
+                [s.name for s in statuses],
+            )
+            return SuggestionListResponse(
+                items=[
+                    SuggestionItem(
+                        id=r["id"],
+                        status=r["status"],
+                        title=r["teacher_title"],
+                        source_id=r["source_id"],
+                    )
+                    for r in rows
+                ]
+            )
 
     async def select_suggestion(self, iid: int) -> SuggestionResponse:
         async with self.pool.acquire() as conn:
-            r = await conn.fetchrow("""
+            r = await conn.fetchrow(
+                """
                 SELECT 
                 id, status, user_isu, moderator_isu, text, 
                 teacher_id, teacher_title, subject_id, subject_title, 
                 subs_id, subs_title, comment_id
                 FROM public.suggestion
                 WHERE id = $1;
-                """, iid)
+                """,
+                iid,
+            )
             if r is None:
                 return None
             return SuggestionResponse(
-                id=r['id'], status=r['status'], user_isu=r['user_isu'], moderator_isu=r['moderator_isu'],
-                text=r['text'],
-                teacher=InputItem(id=r['teacher_id'], title=r['teacher_title']),
-                subject=InputItem(id=r['subject_id'], title=r['subject_title']),
-                subs=[] if r['subs_id'] is None else [
-                    InputItem(id=None if x_id == '' else int(x_id), title=x_title)
-                    for x_id, x_title in zip(r['subs_id'].split(';'), r['subs_title'].split(';'))
+                id=r["id"],
+                status=r["status"],
+                user_isu=r["user_isu"],
+                moderator_isu=r["moderator_isu"],
+                text=r["text"],
+                teacher=InputItem(id=r["teacher_id"], title=r["teacher_title"]),
+                subject=InputItem(id=r["subject_id"], title=r["subject_title"]),
+                subs=[]
+                if r["subs_id"] is None
+                else [
+                    InputItem(id=None if x_id == "" else int(x_id), title=x_title)
+                    for x_id, x_title in zip(
+                        r["subs_id"].split(";"), r["subs_title"].split(";")
+                    )
                 ],
-                comment_id=r['comment_id']
+                comment_id=r["comment_id"],
             )
 
-    async def update_suggestion_status(self, moderator_isu: int,
-                                       iid: int, status: SuggestionStatus) -> SuggestionCancelResponse:
+    async def update_suggestion_status(
+        self, moderator_isu: int, iid: int, status: SuggestionStatus
+    ) -> SuggestionCancelResponse:
         async with self.pool.acquire() as conn:
             try:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE public.suggestion 
                     SET status=$1, moderator_isu=$2
                     WHERE id=$3;
-                    """, status, moderator_isu, iid)
+                    """,
+                    status,
+                    moderator_isu,
+                    iid,
+                )
                 return SuggestionCancelResponse(status=status)
             except ForeignKeyViolationError as e:
                 print(e)
                 return None
 
-    async def commit_suggestion(self, moderator_isu: int,
-                                iid: int, data: SuggestionCommitRequest) -> SuggestionCommitResponse:
+    async def commit_suggestion(
+        self, moderator_isu: int, iid: int, data: SuggestionCommitRequest
+    ) -> SuggestionCommitResponse:
         async with self.pool.acquire() as conn:
             try:
                 async with conn.transaction():
-                    row = await conn.fetch("""
+                    row = await conn.fetch(
+                        """
                         SELECT date, source_id 
                         FROM public.suggestion
                         WHERE id = $1;
-                        """, iid)
-                    comment_id = await conn.fetchval("""
+                        """,
+                        iid,
+                    )
+                    comment_id = await conn.fetchval(
+                        """
                         INSERT INTO public.comment(
                         date, source_id, text, subject_id, teacher_id)
                         VALUES ($1, $2, $3, $4, $5)
                         RETURNING id;
-                        """, row[0]['date'], row[0]['source_id'], data.text, data.subject.id, data.teacher.id)
+                        """,
+                        row[0]["date"],
+                        row[0]["source_id"],
+                        data.text,
+                        data.subject.id,
+                        data.teacher.id,
+                    )
                     for s in data.subs + [data.subject]:
-                        await conn.execute("""
+                        await conn.execute(
+                            """
                             INSERT INTO public.relationst(subject_id, teacher_id)
                             VALUES ($1, $2) 
                             ON CONFLICT DO NOTHING;
-                            """, s.id, data.teacher.id)
-                    await conn.execute("""
+                            """,
+                            s.id,
+                            data.teacher.id,
+                        )
+                    await conn.execute(
+                        """
                         UPDATE public.suggestion 
                         SET status=$1, moderator_isu=$2, comment_id=$4
                         WHERE id=$3;
-                        """, SuggestionStatus.accepted, moderator_isu, iid, comment_id)
+                        """,
+                        SuggestionStatus.accepted,
+                        moderator_isu,
+                        iid,
+                        comment_id,
+                    )
                     return SuggestionCommitResponse(comment_id=comment_id)
             except ForeignKeyViolationError as e:
                 print(e)
@@ -361,68 +482,104 @@ class Postgres:
 
     async def select_moderators(self):
         async with self.pool.acquire() as conn:
-            mods = await conn.fetch("SELECT * FROM public.moderator WHERE access = TRUE;")
-            return {int(m['isu']): None for m in mods}
+            mods = await conn.fetch(
+                "SELECT * FROM public.moderator WHERE access = TRUE;"
+            )
+            return {int(m["isu"]): None for m in mods}
 
     async def upsert_teacher(self, data: TeacherUpdateRequest) -> TeacherUpdateResponse:
         async with self.pool.acquire() as conn:
-            isu = await conn.fetchval("""
+            isu = await conn.fetchval(
+                """
                 INSERT INTO public.teacher(id, name)
                 VALUES ($1, $2)
                 ON CONFLICT (id) DO UPDATE
                 SET name = $2
                 RETURNING id;
-            """, data.id, data.title)
+            """,
+                data.id,
+                data.title,
+            )
             await self.reload_cache()
             return TeacherUpdateResponse(id=isu)
 
     async def upsert_subject(self, data: SubjectUpdateRequest) -> SubjectUpdateResponse:
         async with self.pool.acquire() as conn:
             if data.id is None:
-                subject_id = await conn.fetchval("""
+                subject_id = await conn.fetchval(
+                    """
                     INSERT INTO public.subject(title)
                     VALUES ($1)
                     RETURNING id;
-                """, data.title)
+                """,
+                    data.title,
+                )
             else:
-                subject_id = await conn.fetchval("""
+                subject_id = await conn.fetchval(
+                    """
                     INSERT INTO public.subject(id, title)
                     VALUES ($1, $2)
                     ON CONFLICT (id) DO UPDATE
                     SET title = $2
                     RETURNING id;
-                """, data.id, data.title)
+                """,
+                    data.id,
+                    data.title,
+                )
             await self.reload_cache()
             return SubjectUpdateResponse(id=subject_id)
 
     async def insert_comment(self, data: CommentAddRequest) -> CommentAddResponse:
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                comment_id = await conn.fetchval("""
+                comment_id = await conn.fetchval(
+                    """
                     INSERT INTO public.comment(
                     date, text, source_id, subject_id, teacher_id)
                     VALUES ($1, $2, $3, $4, $5)
                     RETURNING id;
-                    """, data.date, data.text, data.source_id, data.subject.id, data.teacher.id)
+                    """,
+                    data.date,
+                    data.text,
+                    data.source_id,
+                    data.subject.id,
+                    data.teacher.id,
+                )
                 for s in data.subs + [data.subject]:
-                    await conn.execute("""
+                    await conn.execute(
+                        """
                         INSERT INTO public.relationst(subject_id, teacher_id)
                         VALUES ($1, $2) 
                         ON CONFLICT DO NOTHING;
-                        """, s.id, data.teacher.id)
+                        """,
+                        s.id,
+                        data.teacher.id,
+                    )
                 return CommentAddResponse(id=comment_id)
 
     async def select_gs_processed(self) -> set:
         async with self.pool.acquire() as conn:
             rows = await conn.fetch("SELECT * FROM gsparser.processed;")
-            return set([r['id'] for r in rows])
+            return set([r["id"] for r in rows])
 
-    async def insert_gs_suggestion(self, row_id: str, date: str, teacher: str, subject: str, review: str) -> int:
+    async def insert_gs_suggestion(
+        self, row_id: str, date: str, teacher: str, subject: str, review: str
+    ) -> int:
         async with self.pool.acquire() as conn:
-            suggestion_id = await conn.fetchval("""
+            suggestion_id = await conn.fetchval(
+                """
                 INSERT INTO public.suggestion(status, source_id, date, teacher_title, subject_title, text)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id;
-                """, SuggestionStatus.delayed, 2, date, teacher, subject, review)
-            await conn.execute("INSERT INTO gsparser.processed(id) VALUES ($1);", row_id)
+                """,
+                SuggestionStatus.delayed,
+                2,
+                date,
+                teacher,
+                subject,
+                review,
+            )
+            await conn.execute(
+                "INSERT INTO gsparser.processed(id) VALUES ($1);", row_id
+            )
             return suggestion_id
