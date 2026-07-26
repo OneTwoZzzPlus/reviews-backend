@@ -10,13 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from core.database import AsyncSession, get_database
 from enums import SearchType, SuggestionStatus
 from models.reviews import Subject, Teacher, Comment, RelationST
-from models.content import (
-    Suggestion,
-    TeacherRating,
-    CommentKarma,
-    Moderator,
-    Processed,
-)
+from models.content import Suggestion, TeacherRating, CommentKarma
 from schemas.reviews import (
     SearchResponse,
     SearchItem,
@@ -508,35 +502,6 @@ class ReviewsService:
 
         await self.session.commit()
         return CommentAddResponse(id=comment.id)
-
-    async def select_moderators(self) -> dict[int, None]:
-        stmt = select(Moderator.isu).where(Moderator.access)
-        res = await self.session.scalars(stmt)
-        return {int(isu): None for isu in res.all()}
-
-    async def select_gs_processed(self) -> set[str]:
-        stmt = select(Processed.id)
-        res = await self.session.scalars(stmt)
-        return set(res.all())
-
-    async def insert_gs_suggestion(
-        self, row_id: str, date: str, teacher: str, subject: str, review: str
-    ) -> int:
-        suggestion = Suggestion(
-            status=SuggestionStatus.delayed,
-            source_id=2,
-            date=date,
-            teacher_title=teacher,
-            subject_title=subject,
-            text=review,
-        )
-        self.session.add(suggestion)
-
-        processed = Processed(id=row_id)
-        self.session.add(processed)
-
-        await self.session.commit()
-        return suggestion.id
 
 
 async def get_reviews_service(
