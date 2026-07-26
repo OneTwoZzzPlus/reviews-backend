@@ -91,6 +91,7 @@ docker compose -f /opt/reviews/backend/docker-compose.yml up -d
 Неободимо поместить secret данные в GitHub `Settings` -> `Secrets`.
 - DOCKER_USER
 - DOCKER_TOKEN
+- GHCR_PAT
 - SERVER_HOST
 - SERVER_USER
 - SERVER_SSH_KEY
