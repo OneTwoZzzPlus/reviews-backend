@@ -21,8 +21,30 @@
 
 ## Тестирование
 Неободимо поместить в `.env` все переменные.
+```
+LOG_LEVEL=INFO
+PG_ECHO=FALSE
+AUTH_VERIFY=FALSE
+
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=reviews
+PG_USERNAME=admin
+PG_PASSWORD=admin
+```
+
 ```bash
-uvicorn src.main:app
+fastapi dev src\main.py
+```
+или
+```bash
+uvicorn main:app --reload --app-dir src
+```
+
+Сборка и запуск контейнера
+```bash
+docker build -t reviews-backend:latest .
+docker run -p 8000:8000 --env-file .env reviews-backend:latest
 ```
 
 ## Автоматическое развертывание

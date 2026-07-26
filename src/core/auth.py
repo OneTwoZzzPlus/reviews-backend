@@ -62,16 +62,13 @@ class AuthMiddleware:
                         "verify_signature": True,
                         "verify_exp": False,
                         "verify_iss": True,
-                        "verify_aud": False
-                    }
+                        "verify_aud": False,
+                    },
                 )
             else:
                 if token.isdigit() and len(token) == 6:
                     return {"isu": int(token)}
-                return jwt.decode(
-                    token,
-                    options={"verify_signature": False}
-                )
+                return jwt.decode(token, options={"verify_signature": False})
 
         except jwt.exceptions.ExpiredSignatureError:
             logger.info("JWT: Token has expired.")

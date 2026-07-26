@@ -1,7 +1,7 @@
 fastapi[standard]
 uvicorn
 asyncpg
+sqlalchemy
 pyjwt[crypto]
 RapidFuzz
 prometheus-fastapi-instrumentator
-requests
