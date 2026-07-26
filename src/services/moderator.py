@@ -1,12 +1,15 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import ClassVar
+
 from fastapi import Depends
 from sqlalchemy import select
+
 from core.database import AsyncSession, get_database
 from models.content import Moderator
 
 
 class ModeratorService:
-    _moderators_cache: set[int] = set()
+    _moderators_cache: ClassVar[set[int]] = set()
 
     def __init__(self, session: AsyncSession):
         self.session = session

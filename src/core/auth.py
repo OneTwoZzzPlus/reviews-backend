@@ -1,7 +1,8 @@
 import logging
+
+import jwt
 from fastapi import Request
 from fastapi.security import APIKeyHeader
-import jwt
 from jwt import PyJWKClient
 
 logger = logging.getLogger("uvicorn.error")
@@ -80,8 +81,8 @@ class AuthMiddleware:
             logger.error("JWT error: Invalid token structure (not enough segments).")
         except jwt.exceptions.PyJWKClientError as e:
             logger.critical(f"JWT: Could not fetch public keys from ITMO.ID. {e}")
-        except Exception as e:
-            logger.exception(f"Unexpected JWT validation error: {e}")
+        except Exception:
+            logger.exception("Unexpected JWT validation error")
 
         return None
 

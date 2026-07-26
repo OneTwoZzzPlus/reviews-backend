@@ -1,19 +1,21 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from core.auth import token_header, get_isu
-from services.reviews import get_reviews_service, ReviewsService
+
+from core.auth import get_isu, token_header
 from enums import SearchType
 from schemas.reviews import (
-    SearchResponse,
-    TeacherResponse,
-    SubjectResponse,
-    TeacherRateRequest,
-    TeacherRateResponse,
     CommentKarmaRequest,
     CommentKarmaResponse,
+    SearchResponse,
+    SubjectResponse,
     SuggestionAddRequest,
     SuggestionAddResponse,
+    TeacherRateRequest,
+    TeacherRateResponse,
+    TeacherResponse,
 )
+from services.reviews import ReviewsService, get_reviews_service
 
 router = APIRouter(dependencies=[Depends(token_header)], tags=["General"])
 

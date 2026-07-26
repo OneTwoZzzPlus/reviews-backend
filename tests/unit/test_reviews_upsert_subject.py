@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+
 from schemas.reviews import SubjectUpdateRequest
 from services.reviews import ReviewsService
 

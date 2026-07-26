@@ -1,13 +1,16 @@
-from sqlalchemy import String, ForeignKey, select, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
+from typing import ClassVar
+
+from sqlalchemy import ForeignKey, String, func, select
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
+
 from core.database import Base
-from models.content import TeacherRating, CommentKarma
+from models.content import CommentKarma, TeacherRating
 from models.schemas import PUBLIC_SCHEMA
 
 
 class Source(Base):
     __tablename__ = "source"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String)
@@ -16,7 +19,7 @@ class Source(Base):
 
 class Subject(Base):
     __tablename__ = "subject"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String)
@@ -30,7 +33,7 @@ class Subject(Base):
 
 class Teacher(Base):
     __tablename__ = "teacher"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String)
@@ -62,7 +65,7 @@ class Teacher(Base):
 
 class Summary(Base):
     __tablename__ = "summary"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String)
@@ -74,7 +77,7 @@ class Summary(Base):
 
 class RelationST(Base):
     __tablename__ = "relationst"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("public.subject.id"), primary_key=True
@@ -86,7 +89,7 @@ class RelationST(Base):
 
 class Comment(Base):
     __tablename__ = "comment"
-    __table_args__ = {"schema": PUBLIC_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": PUBLIC_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     date: Mapped[str] = mapped_column(String)

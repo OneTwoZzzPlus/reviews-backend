@@ -1,43 +1,46 @@
 import re
-from datetime import datetime, timezone, timedelta
-from rapidfuzz import fuzz
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta, timezone
+from typing import ClassVar
+
 from fastapi import Depends
+from rapidfuzz import fuzz
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload, with_loader_criteria
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload, with_loader_criteria
+
 from core.database import AsyncSession, get_database
 from enums import SearchType, SuggestionStatus
-from models.reviews import Subject, Teacher, Comment, RelationST
-from models.content import Suggestion, TeacherRating, CommentKarma
+from models.content import CommentKarma, Suggestion, TeacherRating
+from models.reviews import Comment, RelationST, Subject, Teacher
 from schemas.reviews import (
-    SearchResponse,
-    SearchItem,
-    TeacherResponse,
-    SummarySchema,
-    CommentSchema,
-    SourceSchema,
-    SubjectSchema,
-    SubjectResponse,
-    TeacherRateResponse,
-    CommentKarmaResponse,
-    SuggestionAddRequest,
-    SuggestionAddResponse,
-    SuggestionListResponse,
-    SuggestionItem,
-    SuggestionResponse,
-    InputItem,
-    SuggestionCommitRequest,
-    SuggestionCommitResponse,
-    SuggestionCancelRequest,
-    SuggestionCancelResponse,
-    TeacherUpdateRequest,
-    TeacherUpdateResponse,
-    SubjectUpdateRequest,
-    SubjectUpdateResponse,
     CommentAddRequest,
     CommentAddResponse,
+    CommentKarmaResponse,
+    CommentSchema,
+    InputItem,
+    SearchItem,
+    SearchResponse,
+    SourceSchema,
+    SubjectResponse,
+    SubjectSchema,
+    SubjectUpdateRequest,
+    SubjectUpdateResponse,
+    SuggestionAddRequest,
+    SuggestionAddResponse,
+    SuggestionCancelRequest,
+    SuggestionCancelResponse,
+    SuggestionCommitRequest,
+    SuggestionCommitResponse,
+    SuggestionItem,
+    SuggestionListResponse,
+    SuggestionResponse,
+    SummarySchema,
+    TeacherRateResponse,
+    TeacherResponse,
+    TeacherUpdateRequest,
+    TeacherUpdateResponse,
 )
 
 
@@ -54,15 +57,15 @@ def normalize(text: str) -> str:
 
 def get_current_time():
     utc_plus_3 = timezone(timedelta(hours=3))
-    current_time = datetime.now(timezone.utc).astimezone(utc_plus_3)
+    current_time = datetime.now(UTC).astimezone(utc_plus_3)
     return current_time.strftime("%H:%M %d.%m.%Y")
 
 
 class ReviewsService:
     # static cache variables
-    _teachers_cache: list[dict] = []
-    _subjects_cache: list[dict] = []
-    _cache_loaded: bool = False
+    _teachers_cache: ClassVar[list[dict]] = []
+    _subjects_cache: ClassVar[list[dict]] = []
+    _cache_loaded: ClassVar[bool] = False
 
     def __init__(self, session: AsyncSession):
         self.session = session

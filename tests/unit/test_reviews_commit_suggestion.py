@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock
+
 from sqlalchemy.exc import IntegrityError
-from schemas.reviews import SuggestionCommitRequest, CommitedItem
+
+from schemas.reviews import CommitedItem, SuggestionCommitRequest
 from services.reviews import ReviewsService
 
 

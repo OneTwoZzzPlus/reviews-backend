@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
+
 from sqlalchemy.exc import IntegrityError
+
 from enums import SuggestionStatus
 from schemas.reviews import SuggestionCancelRequest
 from services.reviews import ReviewsService

@@ -1,7 +1,8 @@
-from httpx import HTTPError
 from fastapi import APIRouter, Depends, HTTPException, status
-from services.authp import get_authp_service, AuthItmoIdService
+from httpx import HTTPError
+
 from schemas.reviews import LoginRequest, RefreshRequest, TokenResponse
+from services.authp import AuthItmoIdService, get_authp_service
 
 router = APIRouter(prefix="/authp", tags=["Auth Proxy"])
 

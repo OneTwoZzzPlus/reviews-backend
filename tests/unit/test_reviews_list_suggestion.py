@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+
 from enums import SuggestionStatus
 from services.reviews import ReviewsService
 

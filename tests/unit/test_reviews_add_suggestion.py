@@ -1,4 +1,4 @@
-from schemas.reviews import SuggestionAddRequest, InputItem
+from schemas.reviews import InputItem, SuggestionAddRequest
 from services.reviews import ReviewsService
 
 

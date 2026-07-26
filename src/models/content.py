@@ -1,13 +1,16 @@
-from sqlalchemy import String, ForeignKey, Enum
+from typing import ClassVar
+
+from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from core.database import Base
 from enums import SuggestionStatus
-from models.schemas import PUBLIC_SCHEMA, CONTENT_SCHEMA, GSPARSER_SCHEMA
+from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
 
 
 class Moderator(Base):
     __tablename__ = "moderator"
-    __table_args__ = {"schema": CONTENT_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
 
     isu: Mapped[int] = mapped_column(primary_key=True)
     access: Mapped[bool] = mapped_column(default=False)
@@ -16,7 +19,7 @@ class Moderator(Base):
 
 class CommentKarma(Base):
     __tablename__ = "comment_karma"
-    __table_args__ = {"schema": CONTENT_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
 
     isu: Mapped[int] = mapped_column(primary_key=True)
     comment_id: Mapped[int] = mapped_column(
@@ -27,7 +30,7 @@ class CommentKarma(Base):
 
 class TeacherRating(Base):
     __tablename__ = "teacher_rating"
-    __table_args__ = {"schema": CONTENT_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
 
     isu: Mapped[int] = mapped_column(primary_key=True)
     teacher_id: Mapped[int] = mapped_column(
@@ -38,7 +41,7 @@ class TeacherRating(Base):
 
 class Suggestion(Base):
     __tablename__ = "suggestion"
-    __table_args__ = {"schema": CONTENT_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     status: Mapped[SuggestionStatus] = mapped_column(
@@ -65,6 +68,6 @@ class Suggestion(Base):
 
 class Processed(Base):
     __tablename__ = "processed"
-    __table_args__ = {"schema": GSPARSER_SCHEMA}
+    __table_args__: ClassVar[dict] = {"schema": GSPARSER_SCHEMA}
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)

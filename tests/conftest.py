@@ -1,19 +1,18 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 import pytest_asyncio
 from faker import Faker
-from unittest.mock import AsyncMock, MagicMock
-from httpx import AsyncClient, ASGITransport
-from testcontainers.community.postgres import PostgresContainer
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from testcontainers.community.postgres import PostgresContainer
 
-from main import app
-from core.database import get_database, Base
-from models.schemas import PUBLIC_SCHEMA, CONTENT_SCHEMA, GSPARSER_SCHEMA
-
+import models.content
 import models.reviews  # noqa: F401
-import models.content  # noqa: F401
-
+from core.database import Base, get_database
+from main import app
+from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
 
 # ==================================================
 # UNIT TESTS (MOCKS)

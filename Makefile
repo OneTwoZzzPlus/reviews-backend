@@ -1,10 +1,13 @@
-.PHONY: dev format test test-unit test-int
+.PHONY: dev format lint test test-unit test-int
 
 dev: env
 	fastapi dev src\main.py
 
 format:
 	ruff format
+
+lint: format
+	ruff check --fix .
 
 test:
 	pytest tests/ -v

@@ -1,13 +1,15 @@
 import base64
 import hashlib
-import httpx
-import jwt
 import logging
 import re
 import secrets
 import time
 import urllib
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
+import httpx
+import jwt
+
 from schemas.reviews import TokenResponse
 
 logger = logging.getLogger("uvicorn.error")

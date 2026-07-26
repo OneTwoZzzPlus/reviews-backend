@@ -1,5 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
+
 from sqlalchemy.exc import IntegrityError
+
 from services.reviews import ReviewsService
 
 

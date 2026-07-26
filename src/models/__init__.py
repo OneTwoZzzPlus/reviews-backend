@@ -15,15 +15,15 @@ from models.reviews import (
 )
 
 __all__ = [
-    "Moderator",
+    "Comment",
     "CommentKarma",
-    "TeacherRating",
-    "Suggestion",
+    "Moderator",
     "Processed",
+    "RelationST",
     "Source",
     "Subject",
-    "Teacher",
+    "Suggestion",
     "Summary",
-    "RelationST",
-    "Comment",
+    "Teacher",
+    "TeacherRating",
 ]

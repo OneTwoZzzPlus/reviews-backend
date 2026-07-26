@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
+
 from enums import SearchType
 from services.reviews import ReviewsService
 
