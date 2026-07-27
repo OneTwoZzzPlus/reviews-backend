@@ -1,7 +1,0 @@
-- name: Full deploy
-  hosts: backend
-
-  roles:
-    - docker
-    - persistent
-    - backend

@@ -1,0 +1,14 @@
+- name: Reload Nginx
+  become: true
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+
+- name: Update Nginx config for HTTPS
+  become: true
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+    mode: "0644"
+  vars:
+    has_ssl: true

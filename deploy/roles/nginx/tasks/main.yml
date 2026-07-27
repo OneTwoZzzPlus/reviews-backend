@@ -1,0 +1,77 @@
+- name: Install required packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+    state: present
+    update_cache: true
+
+- name: Create ACME challenge directory
+  become: true
+  ansible.builtin.file:
+    path: /var/www/certbot/.well-known/acme-challenge
+    state: directory
+    mode: "0755"
+    recurse: true
+
+- name: Check certificate existence
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+  register: cert_stat
+
+- name: Deploy Nginx configuration
+  become: true
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+    mode: "0644"
+  vars:
+    has_ssl: "{{ cert_stat.stat.exists }}"
+  notify: Reload Nginx
+
+- name: Enable Nginx site
+  become: true
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ domain_name }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ domain_name }}.conf"
+    state: link
+    force: true
+  notify: Reload Nginx
+
+- name: Ensure Nginx is running
+  become: true
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Obtain Let's Encrypt certificate
+  become: true
+  ansible.builtin.command: >
+    certbot certonly
+    --webroot
+    -w /var/www/certbot
+    --non-interactive
+    --agree-tos
+    -m {{ letsencrypt_email }}
+    -d {{ domain_name }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+  when: enable_https | default(false) | bool
+  notify:
+    - Update Nginx config for HTTPS
+    - Reload Nginx
+
+- name: Deploy Let's Encrypt renewal hook
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      systemctl reload nginx
+  when: enable_https | default(false) | bool

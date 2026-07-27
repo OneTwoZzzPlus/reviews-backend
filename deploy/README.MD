@@ -1,318 +1,194 @@
 # Автоматизированное развёртывание проекта Reviews
 
-- [Архитектура](#архитектура)
-- [Структура репозитория](#структура-репозитория)
-  - [Распределение ответственности](#распределение-ответственности)
-  - [Окружения Ansible](#окружения-ansible)
 - [Настройка контроллера](#настройка-контроллера)
-- [Подготовка нодов](#подготовка-нодов)
-  - [Настройка VM](#настройка-нодов-vm-тестовый-стенд)
-  - [Настройка боевых нодов](#настройка-боевых-нодов)
+- [Подготовка сервера-ноды](#подготовка-сервера-ноды)
 - [Работа с Ansible](#работа-с-ansible)
-  - [Bootstrap](#bootstrap-серверов)
-  - [Persistent сервисы](#деплой-persistent-сервисов)
-  - [Backend](#деплой-backend-сервисов)
-  - [Nginx](#деплой-nginx)
-  - [HTTPS](#https)
-  - [Docker Registry](#docker-registry-опционально)
+  - [Подготовка и проверка](#подготовка-и-проверка)
+  - [Развертывание](#развертывание)
+    - [Bootstrap серверов](#bootstrap-серверов)
+    - [Деплой Nginx](#деплой-nginx)
+    - [Деплой Backend](#деплой-backend)
+- [Архитектура](#архитектура)
 - [Безопасность](#безопасность)
-- [Управление](#управление)
-- [CI/CD Pipeline](#cicd-pipeline)
-- [Roadmap](#roadmap)
-- [Manual deployment (legacy)](#manual-deployment-legacy)
 
-# Архитектура
 
-**Service stack:**
-```text
-Internet -> Nginx + CertBot -> Backend API -> PostgreSQL
-```
-**Monitoring:**
-```text
-Grafana <- Prometheus <- Backend 
-```
-
-# Структура репозитория
-
-```bash
-deploy/
-├── ansible/    # Ansible automation
-├── compose/    # Docker Compose stacks
-├── .env        # Секреты и deployment variables
-└── README.md
-```
-
-## Распределение ответственности
-
-| Compose | Ansible |
-| --- | --- |
-| контейнеры и сети | bootstrap серверов |
-| volumes и environment | установка Docker и зависимостей |
-| сервисы backend/database | деплой compose файлов |
-| monitoring stack | настройка Nginx и HTTPS |
-| runtime конфигурация | orchestration и provisioning |
-
-## Окружения Ansible
-
-```bash
-ansible/inventory
-├── dev    # тестовый стенд [default]
-│   ├── group_vars
-│   │   ├── all.yml
-│   │   └── all.yml.example
-│   └── hosts.ini
-└── prod   # боевое окружение
-    ├── group_vars
-    │   ├── all.yml
-    │   └── all.yml.example
-    └── hosts.ini
-```
 
 # Настройка контроллера
 
-> Тестировалось на Ubuntu WSL
+> Тестировалось на Ubuntu WSL.
 
-## Установка Ansible venv
-
+1. Генерация SSH-ключа:
 ```bash
-ssh-keygen -t ed25519 # Генерация SSH ключа
-
-sudo apt install -y python3-venv python3-pip
-
+ssh-keygen -t ed25519
+```
+2. Установка Ansible в виртуальное окружение (venv):
+```bash
+sudo apt update && sudo apt install -y python3-venv python3-pip
 python3 -m venv ~/ansible-env
-
 source ~/ansible-env/bin/activate
-
 pip install -U pip
 pip install ansible
-
 ansible --version
 ```
 
-# Подготовка нодов
 
-> Тестировалось на Ubuntu в VirtualBox и на VPS
 
-## Настройка нодов VM (тестовый стенд)
+# Подготовка сервера-ноды
 
-1) Устанавливаем Ubuntu на одну VM и клонируем.
+> Тестировалось на VPS Debian 12.
 
-Настраиваем сеть на клонированных VM:
-
-```bash
-sudo hostnamectl set-hostname ansN
-
-sudo rm -f /etc/machine-id
-sudo systemd-machine-id-setup
-
-sudo cloud-init clean
-
-sudo reboot
-```
-
-> Используем inventory `inventory/dev/hosts.ini` (по умолчанию).
-
-## Настройка боевых нодов
-
-1) Подготавливаем VPS или любую Linux-машину с SSH доступом.
-
-> Используем inventory `inventory/prod/hosts.ini`.
-
-## Общие настройки
-
-### Создание deploy пользователя
-
-На нодах:
-
-```bash
-sudo adduser deploy
-
-sudo usermod -aG sudo deploy
-
-sudo visudo
-```
-
-Добавить:
-
-```text
-deploy ALL=(ALL) NOPASSWD:ALL
-```
-
-### Добавление SSH ключей
-
-На контроллере:
-
+1. Настройка SSH-доступа по ключу на удалённом сервере:
 ```bash
 ssh-copy-id deploy@192.168.56.X
 ```
+2. Создание A-записи в DNS для домена хоста.
+3. Проверка корректности адресов в инвентаре `inventory/prod/hosts.ini`.
+
+
 
 # Работа с Ansible
 
-## Активация окружения
+## Подготовка и проверка
 
+1. Активация виртуального окружения:
 ```bash
 source ~/ansible-env/bin/activate
-
-cd ansible
 ```
+2. Создание конфигурационных файлов из шаблонов:
+```bash
+cp inventory/prod/group_vars/all.example.yml inventory/prod/group_vars/all.yml
+cp inventory/prod/hosts.example.ini inventory/prod/hosts.ini
+```
+3. Заполнение переменных: отредактируйте `inventory/prod/group_vars/all.yml`, указав реальные секреты и домены.
 
-## Проверка доступности серверов
-
+4. Проверка доступности хостов:
 ```bash
 ansible all -m ping
 ```
 
-## Bootstrap серверов
+## Развертывание
 
-Устанавливает:
+Полный запуск всех этапов развёртывания:
+```bash
+ansible-playbook playbooks/deploy-full.yml
+```
 
-- Docker Engine
-- Docker Compose Plugin
-- базовые зависимости
+### Bootstrap серверов
 
+Подготовка базового окружения на целевых хостах:
 ```bash
 ansible-playbook playbooks/bootstrap.yml
 ```
 
-## Деплой persistent сервисов
+**Что делает playbook:**
+- Устанавливает системные зависимости (`acl`, `ca-certificates`, `curl`)
+- Настраивает официальный репозиторий Docker
+- Устанавливает Docker Engine и плагин Docker Compose
+- Запускает и включает службу Docker
+- Добавляет указанных пользователей в группу `docker`
 
-Разворачивает:
-
-- PostgreSQL
-- Prometheus
-- Grafana
-
-```bash
-ansible-playbook playbooks/deploy-persistent.yml
+Пример конфигурации (`group_vars/all.yml`):
+```yaml
+docker_users:
+  - deploy
 ```
 
-## Деплой backend сервисов
+### Деплой Nginx
 
-Разворачивает:
-
-- backend compose stack
-- обновление образов
-- авторизация в registry (опционально)
-
-```bash
-ansible-playbook playbooks/deploy-backend.yml
-```
-
-## Деплой nginx
-
-Разворачивает:
-
-- Nginx reverse proxy
-- HTTPS через CertBot (опционально)
-
+Настройка веб-сервера и получение SSL-сертификатов:
 ```bash
 ansible-playbook playbooks/deploy-nginx.yml
 ```
 
-## HTTPS
+**Что делает playbook:**
+- Устанавливает Nginx и Certbot
+- Создаёт директорию для ACME-челленджа Certbot (`/var/www/certbot`)
+- Генерирует и валидирует виртуальный хост Nginx
+- Выпускает SSL-сертификат Let's Encrypt через Certbot
+- Настраивает автоматическую перезагрузку Nginx при продлении сертификата
 
-HTTPS управляется через inventory variables.
-
-Пример:
-
+Пример конфигурации (`group_vars/all.yml`):
 ```yaml
+# Nginx config
+domain_name: reviews.work.gd
+
+# Certbot config
 enable_https: true
-domain_name: api.example.com
-letsencrypt_email: admin@example.com
+letsencrypt_email: example@mail.com
+
+# Backend port for proxying
+backend_port: 8000
 ```
 
-Требования:
+### Деплой Backend
 
-- белый IP
-- открытые 80/443 порты
-- DNS запись
+Развёртывание приложения и его зависимостей:
+```bash
+ansible-playbook playbooks/deploy-backend.yml
+```
 
-## Docker Registry (опционально)
+**Что делает playbook:**
+- Создаёт рабочую директорию `/opt/reviews`
+- Генерирует и загружает `docker-compose.yml` и `.env` из шаблонов
+- Выполняет авторизацию в GHCR (GitHub Container Registry)
+- Подтягивает контейнеры и запускает сервис через `docker compose`
 
-> Для публичных образов можно оставить пустым.
-
-Поддерживается:
-
-- Docker Hub
-- GHCR
-
-Пример:
-
+Пример конфигурации (`group_vars/all.yml`):
 ```yaml
-docker_registry_url: ghcr.io
-docker_registry_username: myuser
-docker_registry_password: mytoken
+# GHCR credentials
+ghcr_username: OneTwoZzzPlus
+ghcr_token: "ChangeMe"
+
+# Backend
+backend_image: ghcr.io/onetwozzzplus/reviews-backend:latest
+backend_port: 8000
+
+backend_log_level: INFO
+backend_pg_echo: false
+backend_auth_verify: true
+
+# Database
+pg_host: localhost
+pg_port: 5432
+pg_database: reviews
+pg_username: admin
+pg_password: "ChangeMe"
+
+# Grafana
+grafana_password: "ChangeMe"
 ```
+
+
+
+# Архитектура
+
+**Стек сервисов:**
+```text
+Internet -> Nginx + Certbot -> Backend API -> PostgreSQL
+```
+
+**Мониторинг:**
+```text
+Grafana <- Prometheus <- Backend
+```
+
+
 
 # Безопасность
 
-В репозиторий НЕ должны попадать:
-
+В Git-репозиторий **НЕ должны** попадать:
 - `.env`
 - `inventory/*/group_vars/all.yml`
-- приватные SSH ключи
-- токены registry
-- production secrets
+- `inventory/*/hosts.ini`
+- Приватные SSH-ключи
+- Токены доступа к Registry
+- Production-секреты и пароли
 
-Используйте:
+Для работы используйте шаблоны:
+- `all.example.yml`
+- `hosts.example.ini`
 
-- `.env.example`
-- `all.yml.example`
-
-Рекомендуется:
-
-- использовать отдельного deploy пользователя
-- отключить root login по SSH
-- использовать SSH keys вместо password auth
-- ограничить firewall (80/443/22)
-
-# Управление
-
-## Перезапуск persistent сервисов
-
-```bash
-cd /opt/reviews/persistent/
-
-docker compose up -d
-```
-
-## Обновление backend
-
-```bash
-cd /opt/reviews/backend/
-
-docker compose pull backend
-
-docker compose up -d --no-deps backend
-```
-
-# CI/CD Pipeline
-
-```text
-git push
-    ↓
-GitHub Actions
-    ↓
-docker build
-    ↓
-docker push
-    ↓
-ansible deploy
-    ↓
-docker compose pull
-    ↓
-docker compose up -d
-```
-
-# Roadmap
-
-- [x] Docker Compose deployment
-- [x] Ansible provisioning
-- [x] HTTPS + Nginx
-- [x] Monitoring
-- [ ] Database migrations
-- [ ] Zero-downtime deploy
-- [ ] Blue/Green deploy
-- [ ] Multi-node scaling
-- [ ] Kubernetes manifests
-- [ ] Helm charts
+**Рекомендации по безопасности сервера:**
+- Использовать отдельного `deploy`-пользователя с ограниченными `sudo`-правами
+- Отключить авторизацию по паролю и вход под `root` по SSH
+- Ограничить сетевой доступ с помощью Firewall (открыты только порты `22`, `80`, `443`)

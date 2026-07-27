@@ -1,0 +1,5 @@
+- name: Bootstrap servers
+  hosts: backend
+
+  roles:
+    - docker
