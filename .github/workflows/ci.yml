@@ -2,9 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ["main", "dev"]
   pull_request:
-    branches: ["main", "dev"]
 
 env:
   REGISTRY: ghcr.io
@@ -39,6 +37,7 @@ jobs:
   docker:
     needs: lint-and-test
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
     permissions:
       contents: read
       packages: write
@@ -71,7 +70,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
