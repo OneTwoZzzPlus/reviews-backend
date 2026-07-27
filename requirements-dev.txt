@@ -1,0 +1,5 @@
+ruff==0.16.0 
+pytest 
+pytest-asyncio 
+faker
+testcontainers

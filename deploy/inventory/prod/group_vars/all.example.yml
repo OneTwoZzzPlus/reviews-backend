@@ -1,0 +1,32 @@
+# Nginx config
+domain_name: reviews.work.gd
+
+# CertBot config
+enable_https: true
+letsencrypt_email: example@mail.com
+
+# GHCR credentials
+ghcr_username: OneTwoZzzPlus
+ghcr_token: "ChangeMe"
+
+# Backend
+backend_image: ghcr.io/onetwozzzplus/reviews-backend:latest
+backend_port: 8000
+
+backend_log_level: INFO
+backend_pg_echo: FALSE
+backend_auth_verify: TRUE
+
+# Database
+pg_host: localhost
+pg_port: 5432
+pg_database: reviews
+pg_username: admin
+pg_password: "ChangeMe"
+
+# Grafana
+grafana_password: "ChangeMe"
+
+# Users in group docker (optional)
+docker_users: 
+  - deploy

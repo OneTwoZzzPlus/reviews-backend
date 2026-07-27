@@ -20,9 +20,26 @@
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 
 ## Тестирование
-Неободимо поместить в `.env.dev` все переменные.
+##### Неободимо поместить в `.env` все переменные.
+```
+LOG_LEVEL=INFO
+PG_ECHO=FALSE
+AUTH_VERIFY=FALSE
+
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=reviews
+PG_USERNAME=admin
+PG_PASSWORD=admin
+```
+
+##### Запустить локально
 ```bash
-uvicorn src.main:app --reload --env-file .env.dev
+fastapi dev src\main.py
+```
+или
+```bash
+uvicorn main:app --reload --app-dir src
 ```
 
 ## Автоматическое развертывание
@@ -74,6 +91,7 @@ docker compose -f /opt/reviews/backend/docker-compose.yml up -d
 Неободимо поместить secret данные в GitHub `Settings` -> `Secrets`.
 - DOCKER_USER
 - DOCKER_TOKEN
+- GHCR_PAT
 - SERVER_HOST
 - SERVER_USER
 - SERVER_SSH_KEY

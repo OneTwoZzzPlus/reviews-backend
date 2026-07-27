@@ -1,0 +1,51 @@
+- name: Ensure directory exist
+  become: true
+  ansible.builtin.file:
+    path: /opt/reviews
+    state: directory
+    mode: '0755'
+
+- name: Template .env
+  become: true
+  ansible.builtin.template:
+    src: env.j2
+    dest: /opt/reviews/.env
+    mode: '0600'
+  notify: Restart backend
+
+- name: Template prometheus.yml
+  become: true
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: /opt/reviews/prometheus.yml
+    mode: "0644"
+  notify: Restart backend
+
+- name: Template docker-compose.yml
+  become: true
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/reviews/docker-compose.yml
+    mode: "0644"
+  notify: Restart backend
+
+- name: Log into GHCR
+  become: true
+  community.docker.docker_login:
+    registry_url: ghcr.io
+    username: "{{ ghcr_username }}"
+    password: "{{ ghcr_token }}"
+    reauthorize: yes
+
+- name: Start backend
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/reviews
+    state: present
+    pull: always
+
+- name: Restart backend project
+  become: true
+  community.docker.docker_compose_v2:
+    project_src: /opt/reviews
+    state: restarted  

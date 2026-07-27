@@ -1,0 +1,7 @@
+- name: Full deploy
+  hosts: backend
+
+  roles:
+    - docker
+    - backend
+    - nginx
