@@ -37,15 +37,16 @@
     password: "{{ ghcr_token }}"
     reauthorize: yes
 
+- name: Pull latest backend image
+  become: true
+  community.docker.docker_image:
+    name: "{{ backend_image }}"
+    source: pull
+    force_source: true
+
 - name: Start backend
   become: true
   community.docker.docker_compose_v2:
     project_src: /opt/reviews
     state: present
-    pull: always
-
-- name: Restart backend project
-  become: true
-  community.docker.docker_compose_v2:
-    project_src: /opt/reviews
-    state: restarted  
+    pull: missing

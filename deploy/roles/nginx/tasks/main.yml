@@ -66,6 +66,9 @@
     - Update Nginx config for HTTPS
     - Reload Nginx
 
+- name: Flush handlers after certbot
+  ansible.builtin.meta: flush_handlers
+
 - name: Deploy Let's Encrypt renewal hook
   become: true
   ansible.builtin.copy:

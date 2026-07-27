@@ -18,15 +18,16 @@ backend_pg_echo: FALSE
 backend_auth_verify: TRUE
 
 # Database
-pg_host: localhost
-pg_port: 5432
 pg_database: reviews
 pg_username: admin
 pg_password: "ChangeMe"
+
+# Prometeus
+prometeus_scrape_interval: 15s
 
 # Grafana
 grafana_password: "ChangeMe"
 
 # Users in group docker (optional)
 docker_users: 
-  - deploy
+  - root

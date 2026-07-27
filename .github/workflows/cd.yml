@@ -20,7 +20,7 @@ jobs:
                   key: ${{ secrets.SERVER_SSH_KEY }}
                   script: |
                       echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-                      cd ~/reviews
+                      cd /opt/reviews
                       docker compose pull backend
                       docker compose up -d --no-deps backend
                       docker image prune -f
