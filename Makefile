@@ -1,6 +1,6 @@
 .PHONY: dev format lint test test-unit test-int
 
-dev: env
+dev:
 	fastapi dev src\main.py
 
 format:

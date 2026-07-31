@@ -9,12 +9,14 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
+from admin.setup import seed_initial_admin, setup_admin
 from api.authp import router as authp_router
 from api.mod import router as mod_router
 from api.reviews import router as reviews_router
 from core.auth import AuthMiddleware
 from core.config import settings
 from core.database import Base, engine
+from core.etag import ETagMiddleware
 
 logging.basicConfig(
     encoding="utf-8",
@@ -35,6 +37,7 @@ async def lifespan(application: FastAPI):
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {GSPARSER_SCHEMA}"))
         import_module("models")
         await conn.run_sync(Base.metadata.create_all)
+    await seed_initial_admin()
     instrumentator.expose(application)
     yield
 
@@ -42,6 +45,10 @@ async def lifespan(application: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 instrumentator.instrument(app)
+
+admin = setup_admin(app, engine)
+
+app.add_middleware(ETagMiddleware)
 
 app.add_middleware(AuthMiddleware, auth_verify=settings.AUTH_VERIFY)
 

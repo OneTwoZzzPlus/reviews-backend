@@ -16,6 +16,9 @@ class Source(Base):
     title: Mapped[str] = mapped_column(String)
     link: Mapped[str | None] = mapped_column(String, default=None)
 
+    def __str__(self):
+        return self.title
+
 
 class Subject(Base):
     __tablename__ = "subject"
@@ -29,6 +32,9 @@ class Subject(Base):
         secondary="public.relationst",
         back_populates="subjects",
     )
+
+    def __str__(self):
+        return self.title
 
 
 class Teacher(Base):
@@ -62,6 +68,9 @@ class Teacher(Base):
     def user_rating(self) -> int | None:
         return self.ratings[0].user_rating if self.ratings else None
 
+    def __str__(self):
+        return self.name
+
 
 class Summary(Base):
     __tablename__ = "summary"
@@ -73,6 +82,9 @@ class Summary(Base):
 
     teacher_id: Mapped[int] = mapped_column(ForeignKey("public.teacher.id"))
     teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="summaries")
+
+    def __str__(self):
+        return f"{self.title}: {self.value}"
 
 
 class RelationST(Base):
@@ -114,3 +126,6 @@ class Comment(Base):
     @property
     def user_karma(self) -> int | None:
         return self.karmas[0].user_karma if self.karmas else None
+
+    def __str__(self):
+        return f"Отзыв ({len(self.text)})"

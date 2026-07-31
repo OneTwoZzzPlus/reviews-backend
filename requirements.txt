@@ -6,3 +6,6 @@ pyjwt[crypto]
 RapidFuzz
 prometheus-fastapi-instrumentator
 httpx
+sqladmin[asyncio]
+itsdangerous
+bcrypt
