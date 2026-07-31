@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
+from admin.setup import setup_admin
 from api.authp import router as authp_router
 from api.mod import router as mod_router
 from api.reviews import router as reviews_router
@@ -42,6 +43,8 @@ async def lifespan(application: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 instrumentator.instrument(app)
+
+admin = setup_admin(app, engine)
 
 app.add_middleware(AuthMiddleware, auth_verify=settings.AUTH_VERIFY)
 

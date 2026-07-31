@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: LogLevelStr = "INFO"
     PG_ECHO: bool = False
 
+    SECRET_KEY: str = "secret_key"
     AUTH_VERIFY: bool = True
 
     PG_HOST: str = "localhost"
