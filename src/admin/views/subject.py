@@ -1,11 +1,10 @@
 from typing import ClassVar
 
-from sqladmin import ModelView
-
+from admin.views.base import BaseAdminView
 from models.reviews import Subject
 
 
-class SubjectAdmin(ModelView, model=Subject):
+class SubjectAdmin(BaseAdminView, model=Subject):
     name = "Subject"
     name_plural = "Subjects"
     icon = "fa-solid fa-book"

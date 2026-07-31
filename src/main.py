@@ -16,6 +16,7 @@ from api.reviews import router as reviews_router
 from core.auth import AuthMiddleware
 from core.config import settings
 from core.database import Base, engine
+from core.etag import ETagMiddleware
 
 logging.basicConfig(
     encoding="utf-8",
@@ -46,6 +47,8 @@ app = FastAPI(lifespan=lifespan)
 instrumentator.instrument(app)
 
 admin = setup_admin(app, engine)
+
+app.add_middleware(ETagMiddleware)
 
 app.add_middleware(AuthMiddleware, auth_verify=settings.AUTH_VERIFY)
 

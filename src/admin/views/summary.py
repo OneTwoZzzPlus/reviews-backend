@@ -1,11 +1,10 @@
 from typing import ClassVar
 
-from sqladmin import ModelView
-
+from admin.views.base import BaseAdminView
 from models.reviews import Summary
 
 
-class SummaryAdmin(ModelView, model=Summary):
+class SummaryAdmin(BaseAdminView, model=Summary):
     name = "Summary"
     name_plural = "Summaries"
     icon = "fa-solid fa-tags"

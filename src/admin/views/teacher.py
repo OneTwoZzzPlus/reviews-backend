@@ -1,11 +1,10 @@
 from typing import ClassVar
 
-from sqladmin import ModelView
-
+from admin.views.base import BaseAdminView
 from models.reviews import Teacher
 
 
-class TeacherAdmin(ModelView, model=Teacher):
+class TeacherAdmin(BaseAdminView, model=Teacher):
     name = "Teacher"
     name_plural = "Teachers"
     icon = "fa-solid fa-people-group"

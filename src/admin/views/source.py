@@ -1,11 +1,10 @@
 from typing import ClassVar
 
-from sqladmin import ModelView
-
+from admin.views.base import BaseAdminView
 from models.reviews import Source
 
 
-class SourceAdmin(ModelView, model=Source):
+class SourceAdmin(BaseAdminView, model=Source):
     name = "Source"
     name_plural = "Sources"
     icon = "fa-solid fa-link"

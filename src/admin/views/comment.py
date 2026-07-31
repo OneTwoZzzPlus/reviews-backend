@@ -1,11 +1,10 @@
 from typing import ClassVar
 
-from sqladmin import ModelView
-
+from admin.views.base import BaseAdminView
 from models.reviews import Comment
 
 
-class CommentAdmin(ModelView, model=Comment):
+class CommentAdmin(BaseAdminView, model=Comment):
     name = "Comment"
     name_plural = "Comments"
     icon = "fa-solid fa-comments"

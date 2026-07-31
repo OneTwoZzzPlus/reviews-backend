@@ -1,16 +1,16 @@
 from typing import Any, ClassVar
 
 from fastapi import HTTPException
-from sqladmin import ModelView
 from starlette.requests import Request
 from wtforms import Form, PasswordField
 
 from admin.auth import hash_password, verify_password
+from admin.views.base import BaseAdminView
 from core.config import settings
 from models.content import Moderator
 
 
-class ModeratorAdmin(ModelView, model=Moderator):
+class ModeratorAdmin(BaseAdminView, model=Moderator):
     name = "Moderator"
     name_plural = "Moderators"
     icon = "fa-solid fa-user-shield"
