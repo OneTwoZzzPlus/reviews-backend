@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
-from admin.setup import setup_admin
+from admin.setup import seed_initial_admin, setup_admin
 from api.authp import router as authp_router
 from api.mod import router as mod_router
 from api.reviews import router as reviews_router
@@ -36,6 +36,7 @@ async def lifespan(application: FastAPI):
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {GSPARSER_SCHEMA}"))
         import_module("models")
         await conn.run_sync(Base.metadata.create_all)
+    await seed_initial_admin()
     instrumentator.expose(application)
     yield
 

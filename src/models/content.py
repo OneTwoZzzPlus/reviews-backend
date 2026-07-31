@@ -15,6 +15,7 @@ class Moderator(Base):
     isu: Mapped[int] = mapped_column(primary_key=True)
     access: Mapped[bool] = mapped_column(default=False)
     name: Mapped[str] = mapped_column(String)
+    password_hash: Mapped[str | None] = mapped_column(String, default=None)
 
 
 class CommentKarma(Base):

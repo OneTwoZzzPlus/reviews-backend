@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     PG_ECHO: bool = False
 
     SECRET_KEY: str = "secret_key"
+    MASTER_PASSWORD: str = "master_pass"
     AUTH_VERIFY: bool = True
 
     PG_HOST: str = "localhost"

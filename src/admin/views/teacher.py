@@ -6,18 +6,17 @@ from models.reviews import Teacher
 
 
 class TeacherAdmin(ModelView, model=Teacher):
-    name = "Преподаватель"
-    name_plural = "Преподаватели"
-    icon = "fa-solid fs--chalkboard-user"
+    name = "Teacher"
+    name_plural = "Teachers"
+    icon = "fa-solid fa-people-group"
     page_size = 25
     page_size_options: ClassVar = [25, 50, 100]
 
     column_list: ClassVar = [
         Teacher.id,
         Teacher.name,
-        Teacher.rating,
+        Teacher.comments,
         Teacher.subjects,
-        Teacher.summaries,
     ]
 
     column_searchable_list: ClassVar = [Teacher.name]
@@ -25,24 +24,24 @@ class TeacherAdmin(ModelView, model=Teacher):
     column_sortable_list: ClassVar = [
         Teacher.id,
         Teacher.name,
-        Teacher.rating,
     ]
 
     column_formatters: ClassVar = {
+        Teacher.summaries: lambda m, _: [str(len(m.summaries))],
+        Teacher.comments: lambda m, _: [str(len(m.comments))],
         Teacher.subjects: lambda m, _: (
-            m.subjects[:1] + ["S"] * (len(m.subjects) - 1)
+            m.subjects[:1] + [f"and {len(m.subjects)} more"]
             if len(m.subjects) > 1
             else m.subjects
-        ),
-        Teacher.summaries: lambda m, _: (
-            ["SUM"] * len(m.summaries) if len(m.summaries) > 1 else m.summaries
         ),
     }
 
     form_columns: ClassVar = [
+        "id",
         "name",
         "subjects",
     ]
+    form_include_pk = True
 
     form_ajax_refs: ClassVar = {
         "subjects": {

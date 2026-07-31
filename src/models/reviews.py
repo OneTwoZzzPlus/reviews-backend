@@ -71,14 +71,6 @@ class Teacher(Base):
     def __str__(self):
         return self.name
 
-    @property
-    def subjects_count(self):
-        return len(self.subjects)
-
-    @property
-    def summaries_count(self):
-        return len(self.summaries)
-
 
 class Summary(Base):
     __tablename__ = "summary"
@@ -136,4 +128,4 @@ class Comment(Base):
         return self.karmas[0].user_karma if self.karmas else None
 
     def __str__(self):
-        return f"Комментарий {self.id} ({len(self.text)} символов)"
+        return f"Отзыв ({len(self.text)})"
