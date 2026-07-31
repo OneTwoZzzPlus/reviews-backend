@@ -8,7 +8,8 @@ backend_port: 8000
 
 backend_log_level: INFO
 backend_pg_echo: FALSE
-backend_auth_verify: TRUE
+backend_secret_key: "ChangeMe"
+backend_master_pass: "ChangeMe"
 
 # Database
 pg_host: db

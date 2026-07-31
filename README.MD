@@ -1,13 +1,17 @@
 # [Reviews](https://onetwozzzplus.github.io/reviews/#/) - отзывы на преподавателей
 
+> Понравился проект? Не забудь поставить ⭐ на репозитории.
+
 [![Frontend Repository](https://img.shields.io/badge/Frontend-24292E?style=for-the-badge&logo=github&logoColor=white)](https://github.com/OneTwoZzzPlus/reviews)
 [![Backend Repository](https://img.shields.io/badge/Backend-24292E?style=for-the-badge&logo=github&logoColor=white)](https://github.com/OneTwoZzzPlus/reviews-backend)
 
 ## Стек
+
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
 ![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)
+![SQLAdmin](https://img.shields.io/badge/SQLAdmin-000000?style=for-the-badge&logo=fastapi&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
@@ -20,85 +24,98 @@
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white)
 
 ## Тестирование
-##### Неободимо поместить в `.env` все переменные.
-```
-LOG_LEVEL=INFO
-PG_ECHO=FALSE
-AUTH_VERIFY=FALSE
 
-PG_HOST=localhost
-PG_PORT=5432
-PG_DATABASE=reviews
-PG_USERNAME=admin
-PG_PASSWORD=admin
+```bash
+make dev
 ```
 
-##### Запустить локально
+<details>
+<summary>Альтернативно</summary>
+
 ```bash
 fastapi dev src\main.py
 ```
-или
+
 ```bash
 uvicorn main:app --reload --app-dir src
 ```
 
-## Автоматическое развертывание
+</details>
 
-[Иструкция по развертыванию через Ansible.](./deploy/README.MD)
+## Линтинг и тесты
 
-## Ручное развертывание (legacy)
+```bash
+make lint
+make test
+```
 
-### Зарегистрировать домен
+<details>
+<summary>Альтернативно</summary>
 
-Например, бесплатно тут:
+```bash
+ruff check --fix .
+pytest tests/ -v
+```
 
-- https://www.duckdns.org/
-- https://dnsexit.com
+</details>
 
-### На хосте поднять окружение
+## Развертывание
 
-1) Добавить в директорию `/opt/reviews` настроенные compose файлы из `compose/`:
+**[Иструкция по развертыванию через Ansible.](./deploy/README.MD)**
+
+<details>
+<summary> Ручное развертывание (legacy) </summary>
+
+1. Добавить в директорию `/opt/reviews` настроенные [compose файлы](/deploy/roles/backend/templates/):
 
 ```bash
 /opt/reviews
-├── backend
-│   └── docker-compose.yml
-└── persistent
-    ├── docker-compose.yml
-    └── prometheus.yml
+├── .env
+├── docker-compose.yml
+└── prometheus.yml
 ```
 
-2) Создать сеть:
+2. Запустить backend:
 
 ```bash
-docker network create reviews_network
+docker compose -f /opt/reviews/docker-compose.yml up -d
 ```
 
-3) Запустить persistent stack:
+3. Настроить nginx заполненным [конфигом](/deploy/roles/nginx/templates/nginx.conf.j2)
 
-```bash
-docker compose -f /opt/reviews/persistent/docker-compose.yml up -d
-```
+</details>
 
-4) Запустить backend:
+## CI/CD
 
-```bash
-docker compose -f /opt/reviews/backend/docker-compose.yml up -d
-```
+### [CI Pipeline](.github/workflows/ci.yml)
 
-### CI/CD
+> Автоматически срабатывает при каждом push и pull_request
 
-Неободимо поместить secret данные в GitHub `Settings` -> `Secrets`.
-- DOCKER_USER
-- DOCKER_TOKEN
-- GHCR_PAT
-- SERVER_HOST
-- SERVER_USER
-- SERVER_SSH_KEY
+- Устанавливает окружение Python 3.11, проверяет код с помощью Ruff и прогоняет тесты через Pytest.
 
-Workflow запуститься после `push` в `main`.
-```bash
-git add .
-git commit -m "Fixing GA"
-git push -u origin main
-```
+- При изменениях в ветке main собирает Docker-образ с помощью Buildx и пушит его в GitHub Container Registry (ghcr.io) с тегами latest и короткой строкой sha-commit.
+
+### [CD Deploy](.github/workflows/cd.yml)
+
+> Автоматически запускается после успешного завершения пайплайна CI Pipeline в ветке main (также возможен ручной запуск через workflow_dispatch)
+
+- Авторизуется на целевом сервере по SSH.
+
+- Выполняет `docker login` в GHCR.
+
+- Подтягивает свежий образ бэкенда (`docker compose pull backend`).
+
+- Перезапускает контейнер без простоя других сервисов (`docker compose up -d --no-deps backend`).
+
+- Очищает старые неиспользуемые Docker-образы (`docker image prune -f`).
+
+### Необходимые Secrets в GitHub
+
+🔑 `Settings` $\rightarrow$ `Secrets and variables` $\rightarrow$ `Actions`
+
+| Secret         | Описание                                        |
+| -------------- | ----------------------------------------------- |
+| GHCR_PAT       | Personal Access Token с правами `read:packages` |
+| SERVER_HOST    | IP-адрес или доменное имя целевого сервера      |
+| SERVER_USER    | Имя пользователя SSH для подключения к серверу  |
+| SERVER_SSH_KEY | Приватный SSH-ключ для авторизации на сервере   |
