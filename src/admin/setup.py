@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from sqladmin import Admin
@@ -9,12 +11,14 @@ from admin.views.comment import CommentAdmin
 from admin.views.moderator import ModeratorAdmin
 from admin.views.source import SourceAdmin
 from admin.views.subject import SubjectAdmin
+from admin.views.suggestion import SuggestionAdmin
 from admin.views.summary import SummaryAdmin
 from admin.views.teacher import TeacherAdmin
 from core.config import settings
 from core.database import async_session_maker
 from models.content import Moderator
 
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
     authentication_backend = AdminAuth(secret_key=settings.SECRET_KEY)
@@ -24,12 +28,14 @@ def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
         authentication_backend=authentication_backend,
         title="Admin",
         base_url="/admin",
+        templates_dir=str(TEMPLATES_DIR),
     )
 
     @app.get("/admin", include_in_schema=False)
     async def admin_redirect():
         return RedirectResponse("/admin/")
 
+    admin.add_view(SuggestionAdmin)
     admin.add_view(SubjectAdmin)
     admin.add_view(TeacherAdmin)
     admin.add_view(SummaryAdmin)
