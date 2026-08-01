@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from admin.auth import AdminAuth, hash_password
 from admin.views.comment import CommentAdmin
+from admin.views.dashboard import DashboardAdmin
 from admin.views.moderator import ModeratorAdmin
 from admin.views.source import SourceAdmin
 from admin.views.subject import SubjectAdmin
@@ -20,7 +21,22 @@ from models.content import Moderator
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
+
+class AdminRedirectMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] in ("/admin", "/admin/"):
+            response = RedirectResponse(url="/admin/dashboard", status_code=302)
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
 def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
+    app.add_middleware(AdminRedirectMiddleware)
+
     authentication_backend = AdminAuth(secret_key=settings.SECRET_KEY)
     admin = Admin(
         app=app,
@@ -33,8 +49,9 @@ def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
 
     @app.get("/admin", include_in_schema=False)
     async def admin_redirect():
-        return RedirectResponse(url="/admin/")
+        return RedirectResponse(url="/admin/", status_code=302)
 
+    admin.add_view(DashboardAdmin)
     admin.add_view(SuggestionAdmin)
     admin.add_view(SubjectAdmin)
     admin.add_view(TeacherAdmin)
