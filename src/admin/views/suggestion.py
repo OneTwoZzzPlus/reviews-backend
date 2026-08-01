@@ -19,11 +19,7 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
     name_plural: ClassVar[str] = "Suggestions"
     icon: ClassVar[str] = "fa-solid fa-lightbulb"
 
-    @property
-    def identity(self) -> str:
-        return "suggestion"
-
-    can_create: ClassVar[bool] = False
+    can_create: ClassVar[bool] = True
     can_edit: ClassVar[bool] = False
     can_delete: ClassVar[bool] = True
 
@@ -40,27 +36,38 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
         "subject_title",
     ]
     column_sortable_list: ClassVar[list[str]] = ["id", "status"]
+    column_default_sort = ("id", True)
 
     column_formatters: ClassVar[dict] = {
-        "id": lambda model, attr: Markup(
-            f'<a class="btn btn-sm btn-outline-primary" href="/admin/suggestion/moderate/{model.id}">'
-            f'<i class="fa-solid fa-gavel"></i> #{model.id}</a>'
+        "id": lambda model, attr: (
+            Markup(
+                f'<a class="btn btn-sm btn-outline-primary" href="/admin/suggestion/moderate/{model.id}">'
+                f'<i class="fa-solid fa-gavel"></i> #{model.id}</a>'
+            )
+            if model.status == SuggestionStatus.delayed
+            else Markup(f"{model.id}")
         )
     }
 
     def list_query(self, request: Request):
-        return (
-            super()
-            .list_query(request)
-            .where(Suggestion.status == SuggestionStatus.delayed)
-        )
+        query = super().list_query(request)
+        if request.query_params.get("archive") == "1":
+            return query.where(Suggestion.status != SuggestionStatus.delayed)
+        return query.where(Suggestion.status == SuggestionStatus.delayed)
 
     def count_query(self, request: Request):
-        return (
-            super()
-            .count_query(request)
-            .where(Suggestion.status == SuggestionStatus.delayed)
-        )
+        query = super().count_query(request)
+        if request.query_params.get("archive") == "1":
+            return query.where(Suggestion.status != SuggestionStatus.delayed)
+        return query.where(Suggestion.status == SuggestionStatus.delayed)
+
+    @action(name="view_archive", label="Open Archive", add_in_list=True)
+    async def view_archive(self, request: Request):
+        return RedirectResponse(url="/admin/suggestion/list?archive=1", status_code=303)
+
+    @action(name="view_active", label="Open Active", add_in_list=True)
+    async def view_active(self, request: Request):
+        return RedirectResponse(url="/admin/suggestion/list", status_code=303)
 
     @action(
         name="moderate_selected",
