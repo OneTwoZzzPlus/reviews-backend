@@ -3,6 +3,7 @@ from models.content import (
     Processed,
     Suggestion,
 )
+from models.insights import Insights
 from models.reviews import (
     Comment,
     RelationST,
@@ -14,6 +15,7 @@ from models.reviews import (
 
 __all__ = [
     "Comment",
+    "Insights",
     "Moderator",
     "Processed",
     "RelationST",

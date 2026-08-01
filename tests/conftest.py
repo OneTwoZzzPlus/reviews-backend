@@ -9,10 +9,11 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
 
 import models.content
+import models.insights
 import models.reviews  # noqa: F401
 from core.database import Base, get_database
 from main import app
-from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
+from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
 # ==================================================
 # UNIT TESTS (MOCKS)
@@ -99,7 +100,6 @@ async def init_database_schema(postgres_container):
     engine = create_async_engine(async_url, echo=False)
 
     async with engine.begin() as conn:
-        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {PUBLIC_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {CONTENT_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {GSPARSER_SCHEMA}"))
         await conn.run_sync(Base.metadata.create_all)

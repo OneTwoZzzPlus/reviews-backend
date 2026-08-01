@@ -27,9 +27,8 @@ instrumentator = Instrumentator()
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     async with engine.begin() as conn:
-        from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
+        from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
-        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {PUBLIC_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {CONTENT_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {GSPARSER_SCHEMA}"))
         import_module("models")

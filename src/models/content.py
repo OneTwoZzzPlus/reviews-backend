@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database import Base
 from enums import SuggestionStatus
-from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
+from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
 
 class Moderator(Base):
@@ -40,7 +40,7 @@ class Suggestion(Base):
     subs_id: Mapped[str | None] = mapped_column(String, default=None)
     subs_title: Mapped[str | None] = mapped_column(String, default=None)
     comment_id: Mapped[int | None] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.comment.id", ondelete="CASCADE"), default=None
+        ForeignKey("public.comment.id", ondelete="CASCADE"), default=None
     )
     source_id: Mapped[int] = mapped_column(default=1)
     date: Mapped[str] = mapped_column(String)

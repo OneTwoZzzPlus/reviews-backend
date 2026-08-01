@@ -1,13 +1,12 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class SuggestionStatus(str, Enum):
+class SuggestionStatus(StrEnum):
     delayed = "delayed"
     accepted = "accepted"
     rejected = "rejected"
-    spam = "spam"
 
 
-class SearchType(str, Enum):
+class SearchType(StrEnum):
     teacher = "teacher"
     subject = "subject"
