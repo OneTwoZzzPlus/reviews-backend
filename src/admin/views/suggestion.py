@@ -11,13 +11,17 @@ from admin.views.base import BaseAdminView, touch_data_version
 from core.database import async_session_maker
 from enums import SuggestionStatus
 from models.content import Suggestion
-from models.reviews import Comment, RelationST, Subject, Teacher
+from models.reviews import Comment, RelationST, Source, Subject, Teacher
 
 
 class SuggestionAdmin(BaseAdminView, model=Suggestion):
     name: ClassVar[str] = "Suggestion"
     name_plural: ClassVar[str] = "Suggestions"
     icon: ClassVar[str] = "fa-solid fa-lightbulb"
+
+    @property
+    def identity(self) -> str:
+        return "suggestion"
 
     can_create: ClassVar[bool] = False
     can_edit: ClassVar[bool] = False
@@ -96,27 +100,6 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
             status_code=303,
         )
 
-    @action(name="mark_spam", label="Spam", add_in_list=True)
-    async def mark_spam(self, request: Request):
-        pks = request.query_params.get("pks", "").split(",")
-        updated = False
-        async with async_session_maker() as session:
-            for pk in pks:
-                if pk:
-                    s = await session.get(Suggestion, int(pk))
-                    if s and s.status == SuggestionStatus.delayed:
-                        s.status = SuggestionStatus.spam
-                        updated = True
-            await session.commit()
-
-        if updated:
-            touch_data_version()
-
-        return RedirectResponse(
-            url=request.headers.get("referer", "/admin/suggestion/list"),
-            status_code=303,
-        )
-
     @expose("/moderate/{pk}", methods=["GET"])
     async def moderate_page(self, request: Request):
         pk = int(request.path_params["pk"])
@@ -126,19 +109,28 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
             if not suggestion or suggestion.status != SuggestionStatus.delayed:
                 return RedirectResponse("/admin/suggestion/list", status_code=302)
 
-            teachers_res = await session.execute(select(Teacher))
-            teachers = teachers_res.scalars().all()
-
-            subjects_res = await session.execute(select(Subject))
-            subjects = subjects_res.scalars().all()
+            teachers = (await session.scalars(select(Teacher))).all()
+            subjects = (await session.scalars(select(Subject))).all()
+            sources = (await session.scalars(select(Source))).all()
 
             suggested_subs = []
+            selected_sub_ids = []
+
             if suggestion.subs_title:
                 titles = suggestion.subs_title.split(";")
                 ids = suggestion.subs_id.split(";") if suggestion.subs_id else []
                 for idx, t in enumerate(titles):
-                    sub_id = ids[idx] if idx < len(ids) and ids[idx] else None
+                    if not t and (idx >= len(ids) or not ids[idx]):
+                        continue
+                    sub_id = (
+                        int(ids[idx]) if idx < len(ids) and ids[idx].isdigit() else None
+                    )
                     suggested_subs.append({"id": sub_id, "title": t})
+
+            if suggestion.subs_id:
+                selected_sub_ids = [
+                    int(x) for x in suggestion.subs_id.split(";") if x.isdigit()
+                ]
 
             return await self.templates.TemplateResponse(
                 request,
@@ -146,8 +138,10 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
                 {
                     "suggestion": suggestion,
                     "suggested_subs": suggested_subs,
+                    "selected_sub_ids": selected_sub_ids,
                     "teachers": teachers,
                     "subjects": subjects,
+                    "sources": sources,
                 },
             )
 
@@ -170,6 +164,8 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
                 cleaned_text = str(form.get("cleaned_text", "")).strip()
                 teacher_id = int(form.get("teacher_id", 0))
                 subject_id = int(form.get("subject_id", 0))
+                source_id = int(form.get("source_id", suggestion.source_id or 1))
+                date_val = str(form.get("date", suggestion.date)).strip()
 
                 raw_subs = form.getlist("sub_ids")
                 sub_ids = [int(x) for x in raw_subs if x and str(x).isdigit()]
@@ -178,8 +174,8 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
                     text=cleaned_text,
                     teacher_id=teacher_id,
                     subject_id=subject_id,
-                    date=suggestion.date,
-                    source_id=suggestion.source_id,
+                    date=date_val,
+                    source_id=source_id,
                 )
                 session.add(new_comment)
                 await session.flush()
@@ -201,11 +197,6 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
 
             elif action_type == "reject":
                 suggestion.status = SuggestionStatus.rejected
-                if moderator_isu:
-                    suggestion.moderator_isu = moderator_isu
-
-            elif action_type == "spam":
-                suggestion.status = SuggestionStatus.spam
                 if moderator_isu:
                     suggestion.moderator_isu = moderator_isu
 

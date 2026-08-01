@@ -1,31 +1,22 @@
 {% extends "sqladmin/layout.html" %} {% block content %}
 <div class="container-fluid py-4">
     <div class="row me-0 ms-0">
-        <!-- Левая колонка: Исходное предложение -->
+        <!-- Left column: Original suggestion -->
         <div class="col-md-5 mb-4">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-light">
                     <h5 class="card-title mb-0">
-                        Исходный Suggestion #{{ suggestion.id }}
+                        Original Suggestion #{{ suggestion.id }}
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="fw-bold text-muted small"
-                            >ISU отправителя:</label
-                        >
-                        <div>
-                            {{ suggestion.user_isu if suggestion.user_isu else
-                            'Аноним' }}
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="fw-bold text-muted small"
-                            >Предложенный преподаватель:</label
+                            >Suggested Teacher:</label
                         >
                         <div class="fs-6 fw-semibold text-primary">
-                            {{ suggestion.teacher_title }} {% if
-                            suggestion.teacher_id %}
+                            {{ suggestion.teacher_title if suggestion.teacher_title else '—' }}
+                            {% if suggestion.teacher_id %}
                             <span class="badge bg-secondary"
                                 >(ID: {{ suggestion.teacher_id }})</span
                             >
@@ -34,98 +25,116 @@
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold text-muted small"
-                            >Предложенный основной предмет:</label
+                            >Suggested Subject:</label
                         >
                         <div class="fs-6 fw-semibold text-primary">
-                            {{ suggestion.subject_title }} {% if
-                            suggestion.subject_id %}
+                            {{ suggestion.subject_title if suggestion.subject_title else '—' }}
+                            {% if suggestion.subject_id %}
                             <span class="badge bg-secondary"
                                 >(ID: {{ suggestion.subject_id }})</span
                             >
                             {% endif %}
                         </div>
                     </div>
-                    {% if suggested_subs %}
+
                     <div class="mb-3">
                         <label class="fw-bold text-muted small"
-                            >Предложенные доп. предметы:</label
+                            >Suggested Additional Subjects:</label
                         >
+                        {% if suggested_subs %}
                         <ul class="list-group list-group-flush">
                             {% for sub in suggested_subs %}
                             <li class="list-group-item px-0 py-1 border-0">
-                                • {{ sub.title }} {% if sub.id %}
-                                <span class="badge bg-light text-dark"
-                                    >(ID: {{ sub.id }})</span
-                                >
-                                {% endif %}
+                                • {{ sub.title }} {% if sub.id %}<span class="badge bg-light text-dark">(ID: {{ sub.id }})</span>{% endif %}
                             </li>
                             {% endfor %}
                         </ul>
+                        {% else %}
+                        <div class="text-muted">—</div>
+                        {% endif %}
                     </div>
-                    {% endif %}
+
                     <div class="mb-3">
                         <label class="fw-bold text-muted small"
-                            >Исходный текст отзыва:</label
+                            >Original Review Text:</label
                         >
-                        <div
-                            class="p-3 bg-light rounded border border-light text-break"
-                            style="white-space: pre-wrap"
-                        >
-                            {{ suggestion.text }}
-                        </div>
+                        <div class="p-3 bg-light rounded border border-light text-break" style="white-space: pre-wrap">{{ suggestion.text.strip() }}</div>
                     </div>
-                    <div class="text-muted small">
-                        Дата добавления: {{ suggestion.date }}
+
+                    <!-- Bottom metadata -->
+                    <div class="pt-3 border-top text-muted small">
+                        <div class="mb-1">
+                            <strong>Source ID:</strong> {{ suggestion.source_id }}
+                        </div>
+                        <div>
+                            <strong>Date:</strong> {{ suggestion.date }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Правая колонка: Форма модерации -->
+        <!-- Right column: Moderation form -->
         <div class="col-md-7">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Модерация</h5>
+                    <h5 class="card-title mb-0">Moderation</h5>
                 </div>
                 <div class="card-body">
                     <form
                         method="POST"
                         action="/admin/suggestion/moderate/{{ suggestion.id }}/commit"
                     >
-                        <!-- Выбор реального преподавателя -->
+                        <!-- DB Teacher selection -->
                         <div class="mb-3">
                             <label for="teacher_id" class="form-label fw-bold"
-                                >Преподаватель в БД *</label
+                                >DB Teacher *</label
                             >
-                            <select class="form-select select2-search" id="teacher_id" name="teacher_id" required>
-                                <option value="">--- Выберите преподавателя ---</option>
+                            <select
+                                class="form-select select2-search"
+                                id="teacher_id"
+                                name="teacher_id"
+                                required
+                            >
+                                <option value="">--- Select Teacher ---</option>
                                 {% for t in teachers %}
-                                <option value="{{ t.id }}" {{ 'selected' if suggestion.teacher_id == t.id else '' }}>
+                                <option
+                                    value="{{ t.id }}"
+                                    {{ 'selected' if suggestion.teacher_id == t.id else '' }}
+                                >
                                     {{ t.name }} (ID: {{ t.id }})
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <!-- Выбор основного предмета -->
+                        <!-- DB Main Subject selection -->
                         <div class="mb-3">
                             <label for="subject_id" class="form-label fw-bold"
-                                >Основной предмет в БД *</label
+                                >DB Main Subject *</label
                             >
-                            <select class="form-select select2-search" id="subject_id" name="subject_id" required>
-                                <option value="">--- Выберите предмет ---</option>
+                            <select
+                                class="form-select select2-search"
+                                id="subject_id"
+                                name="subject_id"
+                                required
+                            >
+                                <option value="">--- Select Subject ---</option>
                                 {% for s in subjects %}
-                                <option value="{{ s.id }}" {{ 'selected' if suggestion.subject_id == s.id else '' }}>
+                                <option
+                                    value="{{ s.id }}"
+                                    {{ 'selected' if suggestion.subject_id == s.id else '' }}
+                                >
                                     {{ s.title }} (ID: {{ s.id }})
                                 </option>
                                 {% endfor %}
-                            </select>   
+                            </select>
                         </div>
 
-                        <!-- Выбор дополнительных предметов (RelationST) -->
+                        <!-- Additional subjects (RelationST) -->
                         <div class="mb-3">
                             <label for="sub_ids" class="form-label fw-bold"
-                                >Дополнительные предметы (RelationST)</label
+                                >Additional Subjects (RelationST)</label
                             >
                             <select
                                 class="form-select select2-search"
@@ -134,21 +143,60 @@
                                 multiple
                             >
                                 {% for s in subjects %}
-                                <option value="{{ s.id }}">
+                                <option
+                                    value="{{ s.id }}"
+                                    {{ 'selected' if s.id in selected_sub_ids else '' }}
+                                >
                                     {{ s.title }} (ID: {{ s.id }})
                                 </option>
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                Выберите все смежные предметы, которые также
-                                ведет этот преподаватель.
+                                Select all related subjects taught by this teacher.
                             </div>
                         </div>
 
-                        <!-- Редактирование текста -->
+                        <!-- Source & Date fields -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="source_id" class="form-label fw-bold"
+                                    >Source *</label
+                                >
+                                <select
+                                    class="form-select select2-search"
+                                    id="source_id"
+                                    name="source_id"
+                                    required
+                                >
+                                    {% for src in sources %}
+                                    <option
+                                        value="{{ src.id }}"
+                                        {{ 'selected' if suggestion.source_id == src.id else '' }}
+                                    >
+                                        {{ src.name if src.name is defined else src.id }} (ID: {{ src.id }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date" class="form-label fw-bold"
+                                    >Date *</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="date"
+                                    name="date"
+                                    value="{{ suggestion.date }}"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Edited text -->
                         <div class="mb-4">
                             <label for="cleaned_text" class="form-label fw-bold"
-                                >Отредактированный текст отзыва *</label
+                                >Edited Review Text *</label
                             >
                             <textarea
                                 class="form-control"
@@ -161,31 +209,23 @@
                             >
                         </div>
 
-                        <!-- Кнопки действий -->
+                        <!-- Action buttons -->
                         <div
                             class="d-flex justify-content-between align-items-center pt-3 border-top"
                         >
                             <a
                                 href="/admin/suggestion/list"
                                 class="btn btn-outline-secondary"
-                                >Отмена</a
+                                >Cancel</a
                             >
                             <div class="d-flex gap-2">
-                                <button
-                                    type="submit"
-                                    name="action_type"
-                                    value="spam"
-                                    class="btn btn-warning"
-                                >
-                                    Спам
-                                </button>
                                 <button
                                     type="submit"
                                     name="action_type"
                                     value="reject"
                                     class="btn btn-danger"
                                 >
-                                    Отклонить
+                                    Reject
                                 </button>
                                 <button
                                     type="submit"
@@ -193,7 +233,7 @@
                                     value="accept"
                                     class="btn btn-success px-4"
                                 >
-                                    Опубликовать
+                                    Publish
                                 </button>
                             </div>
                         </div>
