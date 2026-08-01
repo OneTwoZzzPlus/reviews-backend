@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from core.database import AsyncSession, get_database
-from enums import SearchType, SuggestionStatus
+from enums.reviews import SearchType, SuggestionStatus
 from models.content import Suggestion
 from models.reviews import Comment, Subject, Teacher
 from schemas.reviews import (
@@ -19,8 +19,8 @@ from schemas.reviews import (
     SourceSchema,
     SubjectResponse,
     SubjectSchema,
-    SuggestionAddRequest,
-    SuggestionAddResponse,
+    SuggestionRequest,
+    SuggestionResponse,
     SummarySchema,
     TeacherResponse,
 )
@@ -213,7 +213,7 @@ class ReviewsService:
             ],
         )
 
-    async def add_suggestion(self, data: SuggestionAddRequest) -> SuggestionAddResponse:
+    async def add_suggestion(self, data: SuggestionRequest) -> SuggestionResponse:
         subs_id = (
             ";".join(["" if x.id is None else str(x.id) for x in data.subs])
             if data.subs
@@ -240,7 +240,7 @@ class ReviewsService:
         )
         self.session.add(suggestion)
         await self.session.commit()
-        return SuggestionAddResponse(id=suggestion.id)
+        return SuggestionResponse(id=suggestion.id)
 
 
 async def get_reviews_service(

@@ -2,12 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from enums import SearchType
+from enums.reviews import SearchType
 from schemas.reviews import (
     SearchResponse,
     SubjectResponse,
-    SuggestionAddRequest,
-    SuggestionAddResponse,
+    SuggestionRequest,
+    SuggestionResponse,
     TeacherResponse,
 )
 from services.reviews import ReviewsService, get_reviews_service
@@ -58,9 +58,9 @@ async def subject(
 
 @router.post("/suggestion", status_code=status.HTTP_202_ACCEPTED)
 async def suggestion(
-    body: SuggestionAddRequest,
+    body: SuggestionRequest,
     service: ReviewsService = Depends(get_reviews_service),
-) -> SuggestionAddResponse:
+) -> SuggestionResponse:
 
     if body.teacher.id is None and body.teacher.title is None:
         raise HTTPException(

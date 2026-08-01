@@ -4,7 +4,7 @@ from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database import Base
-from enums import SuggestionStatus
+from enums.reviews import SuggestionStatus
 from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
 

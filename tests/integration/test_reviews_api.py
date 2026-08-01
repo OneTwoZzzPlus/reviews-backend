@@ -8,7 +8,7 @@ from schemas.reviews import (
     SearchItem,
     SearchResponse,
     SubjectResponse,
-    SuggestionAddResponse,
+    SuggestionResponse,
     TeacherResponse,
 )
 from services.reviews import get_reviews_service
@@ -116,7 +116,7 @@ async def test_get_subject_not_found(client, mock_reviews_service):
 
 
 async def test_suggestion_success(client, mock_reviews_service):
-    mock_reviews_service.add_suggestion.return_value = SuggestionAddResponse(id=42)
+    mock_reviews_service.add_suggestion.return_value = SuggestionResponse(id=42)
 
     payload = {
         "teacher": {"id": 1, "title": None},

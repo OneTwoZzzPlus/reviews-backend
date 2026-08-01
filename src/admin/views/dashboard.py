@@ -8,7 +8,7 @@ from starlette.responses import RedirectResponse
 
 from admin.views.base import touch_data_version
 from core.database import async_session_maker
-from enums import SuggestionStatus
+from enums.reviews import SuggestionStatus
 from models.content import Suggestion
 from services.gsparser import GSParserService
 

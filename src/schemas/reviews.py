@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from enums import SearchType
+from enums.reviews import SearchType
 
 
 class SubjectSchema(BaseModel):
@@ -33,6 +33,9 @@ class SummarySchema(BaseModel):
     value: str
 
 
+# /teacher /subject
+
+
 class TeacherResponse(TeacherSchema):
     summaries: list[SummarySchema]
     comments: list[CommentSchema]
@@ -40,6 +43,9 @@ class TeacherResponse(TeacherSchema):
 
 class SubjectResponse(SubjectSchema):
     teachers: list[TeacherResponse]
+
+
+# /search
 
 
 class SearchItem(BaseModel):
@@ -52,21 +58,20 @@ class SearchResponse(BaseModel):
     results: list[SearchItem]
 
 
+# /suggestion
+
+
 class InputItem(BaseModel):
     id: int | None = None
     title: str | None = None
 
 
-class SuggestionAddRequest(BaseModel):
+class SuggestionRequest(BaseModel):
     teacher: InputItem
     subject: InputItem
     subs: list[InputItem]
     text: str
 
 
-class SuggestionAddResponse(BaseModel):
+class SuggestionResponse(BaseModel):
     id: int
-
-
-class GSParserResponse(BaseModel):
-    count: int
