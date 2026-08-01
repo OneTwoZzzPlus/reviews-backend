@@ -1,0 +1,265 @@
+{% extends "sqladmin/layout.html" %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="row me-0 ms-0">
+        <!-- Left column: Original suggestion -->
+        <div class="col-md-5 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        Original Suggestion #{{ suggestion.id }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="fw-bold text-muted small"
+                            >Suggested Teacher:</label
+                        >
+                        <div class="fs-6 fw-semibold text-primary">
+                            {{ suggestion.teacher_title if suggestion.teacher_title else '—' }}
+                            {% if suggestion.teacher_id %}
+                            <span class="badge bg-secondary"
+                                >(ID: {{ suggestion.teacher_id }})</span
+                            >
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold text-muted small"
+                            >Suggested Subject:</label
+                        >
+                        <div class="fs-6 fw-semibold text-primary">
+                            {{ suggestion.subject_title if suggestion.subject_title else '—' }}
+                            {% if suggestion.subject_id %}
+                            <span class="badge bg-secondary"
+                                >(ID: {{ suggestion.subject_id }})</span
+                            >
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-muted small"
+                            >Suggested Additional Subjects:</label
+                        >
+                        {% if suggested_subs %}
+                        <ul class="list-group list-group-flush">
+                            {% for sub in suggested_subs %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                • {{ sub.title }} {% if sub.id %}<span class="badge bg-light text-dark">(ID: {{ sub.id }})</span>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-muted">—</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="fw-bold text-muted small"
+                            >Original Review Text:</label
+                        >
+                        <div class="p-3 bg-light rounded border border-light text-break" style="white-space: pre-wrap">{{ suggestion.text.strip() }}</div>
+                    </div>
+
+                    <!-- Bottom metadata -->
+                    <div class="pt-3 border-top text-muted small">
+                        <div class="mb-1">
+                            <strong>Source ID:</strong> {{ suggestion.source_id }}
+                        </div>
+                        <div>
+                            <strong>Date:</strong> {{ suggestion.date }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Moderation form -->
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Moderation</h5>
+                </div>
+                <div class="card-body">
+                    <form
+                        method="POST"
+                        action="/admin/suggestion/moderate/{{ suggestion.id }}/commit"
+                    >
+                        <!-- DB Teacher selection -->
+                        <div class="mb-3">
+                            <label for="teacher_id" class="form-label fw-bold"
+                                >DB Teacher *</label
+                            >
+                            <select
+                                class="form-select select2-search"
+                                id="teacher_id"
+                                name="teacher_id"
+                                required
+                            >
+                                <option value="">--- Select Teacher ---</option>
+                                {% for t in teachers %}
+                                <option
+                                    value="{{ t.id }}"
+                                    {{ 'selected' if suggestion.teacher_id == t.id else '' }}
+                                >
+                                    {{ t.name }} (ID: {{ t.id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- DB Main Subject selection -->
+                        <div class="mb-3">
+                            <label for="subject_id" class="form-label fw-bold"
+                                >DB Main Subject *</label
+                            >
+                            <select
+                                class="form-select select2-search"
+                                id="subject_id"
+                                name="subject_id"
+                                required
+                            >
+                                <option value="">--- Select Subject ---</option>
+                                {% for s in subjects %}
+                                <option
+                                    value="{{ s.id }}"
+                                    {{ 'selected' if suggestion.subject_id == s.id else '' }}
+                                >
+                                    {{ s.title }} (ID: {{ s.id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Additional subjects (RelationST) -->
+                        <div class="mb-3">
+                            <label for="sub_ids" class="form-label fw-bold"
+                                >Additional Subjects (RelationST)</label
+                            >
+                            <select
+                                class="form-select select2-search"
+                                id="sub_ids"
+                                name="sub_ids"
+                                multiple
+                            >
+                                {% for s in subjects %}
+                                <option
+                                    value="{{ s.id }}"
+                                    {{ 'selected' if s.id in selected_sub_ids else '' }}
+                                >
+                                    {{ s.title }} (ID: {{ s.id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Select all related subjects taught by this teacher.
+                            </div>
+                        </div>
+
+                        <!-- Source & Date fields -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="source_id" class="form-label fw-bold"
+                                    >Source *</label
+                                >
+                                <select
+                                    class="form-select select2-search"
+                                    id="source_id"
+                                    name="source_id"
+                                    required
+                                >
+                                    {% for src in sources %}
+                                    <option
+                                        value="{{ src.id }}"
+                                        {{ 'selected' if suggestion.source_id == src.id else '' }}
+                                    >
+                                        {{ src.name if src.name is defined else src.id }} (ID: {{ src.id }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date" class="form-label fw-bold"
+                                    >Date *</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="date"
+                                    name="date"
+                                    value="{{ suggestion.date }}"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Edited text -->
+                        <div class="mb-4">
+                            <label for="cleaned_text" class="form-label fw-bold"
+                                >Edited Review Text *</label
+                            >
+                            <textarea
+                                class="form-control"
+                                id="cleaned_text"
+                                name="cleaned_text"
+                                rows="6"
+                                required
+                            >
+{{ suggestion.text }}</textarea
+                            >
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div
+                            class="d-flex justify-content-between align-items-center pt-3 border-top"
+                        >
+                            <a
+                                href="/admin/suggestion/list"
+                                class="btn btn-outline-secondary"
+                                >Cancel</a
+                            >
+                            <div class="d-flex gap-2">
+                                <button
+                                    type="submit"
+                                    name="action_type"
+                                    value="reject"
+                                    class="btn btn-danger"
+                                >
+                                    Reject
+                                </button>
+                                <button
+                                    type="submit"
+                                    name="action_type"
+                                    value="accept"
+                                    class="btn btn-success px-4"
+                                >
+                                    Publish
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link
+    href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+    rel="stylesheet"
+/>
+<link
+    href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+    rel="stylesheet"
+/>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $(".select2-search").select2({
+            theme: "bootstrap-5",
+            width: "100%",
+        });
+    });
+</script>
+{% endblock %}

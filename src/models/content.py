@@ -62,7 +62,9 @@ class Suggestion(Base):
     subject_title: Mapped[str | None] = mapped_column(String, default=None)
     subs_id: Mapped[str | None] = mapped_column(String, default=None)
     subs_title: Mapped[str | None] = mapped_column(String, default=None)
-    comment_id: Mapped[int | None] = mapped_column(default=None)
+    comment_id: Mapped[int | None] = mapped_column(
+        ForeignKey(f"{PUBLIC_SCHEMA}.comment.id", ondelete="CASCADE"), default=None
+    )
     source_id: Mapped[int] = mapped_column(default=1)
     date: Mapped[str] = mapped_column(String)
 

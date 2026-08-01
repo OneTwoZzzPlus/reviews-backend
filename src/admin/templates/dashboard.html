@@ -1,0 +1,128 @@
+{% extends "sqladmin/layout.html" %} {% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 text-gray-800 fw-bold">Dashboard</h2>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if parsed_count is not none %}
+    <div
+        class="alert alert-success alert-dismissible fade show shadow-sm"
+        role="alert"
+    >
+        <i class="fa-solid fa-circle-check me-2"></i>
+        <strong>Parsing completed!</strong> Added {{ parsed_count }} new
+        suggestion(s).
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+        ></button>
+    </div>
+    {% endif %} {% if error_msg %}
+    <div
+        class="alert alert-danger alert-dismissible fade show shadow-sm"
+        role="alert"
+    >
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>Parser Error:</strong> {{ error_msg }}
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+        ></button>
+    </div>
+    {% endif %}
+
+    <!-- Statistics Section -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div
+                class="card border-0 shadow-sm border-start border-4 border-warning h-100 py-2"
+            >
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-warning text-uppercase mb-1"
+                            >
+                                Pending Moderation
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ pending_count }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i
+                                class="fa-solid fa-hourglass-half fa-2x text-black-50"
+                            ></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div
+                class="card border-0 shadow-sm border-start border-4 border-primary h-100 py-2"
+            >
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-primary text-uppercase mb-1"
+                            >
+                                Total Suggestions
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ total_count }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i
+                                class="fa-solid fa-lightbulb fa-2x text-black-50"
+                            ></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Section -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5
+                        class="m-0 fw-bold text-primary d-flex align-items-center gap-2"
+                    >
+                        <i class="fa-solid fa-file-csv"></i> Google Sheets Sync
+                        (GSParser)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-muted">
+                        Fetch new raw feedback entries directly from the
+                        connected Google Sheet. Unprocessed rows will be added
+                        as new suggestions for moderation.
+                    </p>
+
+                    <form method="POST" action="/admin/dashboard/run-gsparser">
+                        <button
+                            type="submit"
+                            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
+                        >
+                            <i class="fa-solid fa-rotate"></i>
+                            Run GSParser
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
