@@ -45,10 +45,18 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
     }
 
     def list_query(self, request: Request):
-        return super().list_query(request).where(Suggestion.status == SuggestionStatus.delayed)
+        return (
+            super()
+            .list_query(request)
+            .where(Suggestion.status == SuggestionStatus.delayed)
+        )
 
     def count_query(self, request: Request):
-        return super().count_query(request).where(Suggestion.status == SuggestionStatus.delayed)
+        return (
+            super()
+            .count_query(request)
+            .where(Suggestion.status == SuggestionStatus.delayed)
+        )
 
     @action(
         name="moderate_selected",
@@ -154,7 +162,9 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
             if not suggestion or suggestion.status != SuggestionStatus.delayed:
                 return RedirectResponse("/admin/suggestion/list", status_code=303)
 
-            moderator_isu = request.state.user.isu if hasattr(request.state, "user") else None
+            moderator_isu = (
+                request.state.user.isu if hasattr(request.state, "user") else None
+            )
 
             if action_type == "accept":
                 cleaned_text = str(form.get("cleaned_text", "")).strip()

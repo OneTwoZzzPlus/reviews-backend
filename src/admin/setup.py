@@ -33,7 +33,7 @@ def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
 
     @app.get("/admin", include_in_schema=False)
     async def admin_redirect():
-        return RedirectResponse("/admin/")
+        return RedirectResponse(url="/admin/")
 
     admin.add_view(SuggestionAdmin)
     admin.add_view(SubjectAdmin)
