@@ -18,28 +18,6 @@ class Moderator(Base):
     password_hash: Mapped[str] = mapped_column(String)
 
 
-class CommentKarma(Base):
-    __tablename__ = "comment_karma"
-    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
-
-    isu: Mapped[int] = mapped_column(primary_key=True)
-    comment_id: Mapped[int] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.comment.id"), primary_key=True
-    )
-    user_karma: Mapped[int] = mapped_column()
-
-
-class TeacherRating(Base):
-    __tablename__ = "teacher_rating"
-    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
-
-    isu: Mapped[int] = mapped_column(primary_key=True)
-    teacher_id: Mapped[int] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.teacher.id"), primary_key=True
-    )
-    user_rating: Mapped[int] = mapped_column()
-
-
 class Suggestion(Base):
     __tablename__ = "suggestion"
     __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
@@ -53,7 +31,6 @@ class Suggestion(Base):
         ),
         default=SuggestionStatus.delayed,
     )
-    user_isu: Mapped[int | None] = mapped_column(default=None)
     moderator_isu: Mapped[int | None] = mapped_column(default=None)
     text: Mapped[str] = mapped_column(String)
     teacher_id: Mapped[int | None] = mapped_column(default=None)

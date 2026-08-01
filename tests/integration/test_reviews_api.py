@@ -3,15 +3,12 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from core.auth import get_isu, token_header
 from main import app
 from schemas.reviews import (
-    CommentKarmaResponse,
     SearchItem,
     SearchResponse,
     SubjectResponse,
     SuggestionAddResponse,
-    TeacherRateResponse,
     TeacherResponse,
 )
 from services.reviews import get_reviews_service
@@ -25,9 +22,6 @@ def mock_reviews_service():
 
 @pytest.fixture
 async def client(mock_reviews_service):
-    # Обходим проверку токена и подменяем получение ISU и сервиса
-    app.dependency_overrides[token_header] = lambda: "test-token"
-    app.dependency_overrides[get_isu] = lambda: 100001
     app.dependency_overrides[get_reviews_service] = lambda: mock_reviews_service
 
     async with AsyncClient(
@@ -75,7 +69,7 @@ async def test_search_not_found(client, mock_reviews_service):
 
 async def test_get_teacher_success(client, mock_reviews_service):
     mock_reviews_service.teacher.return_value = TeacherResponse(
-        id=1, name="Петров П.П.", rating=4.5, summaries=[], comments=[]
+        id=1, name="Петров П.П.", summaries=[], comments=[]
     )
 
     response = await client.get("/teacher/1")
@@ -113,66 +107,6 @@ async def test_get_subject_not_found(client, mock_reviews_service):
     mock_reviews_service.subject.return_value = None
 
     response = await client.get("/subject/999")
-    assert response.status_code == 404
-
-
-# ============================================================================
-# POST /teacher/{iid}/rate
-# ============================================================================
-
-
-async def test_teacher_rate_success(client, mock_reviews_service):
-    mock_reviews_service.teacher_rate.return_value = TeacherRateResponse(
-        rating=4.8, user_rating=5
-    )
-
-    response = await client.post("/teacher/1/rate", json={"user_rating": 5})
-
-    assert response.status_code == 200
-    assert response.json() == {"rating": 4.8, "user_rating": 5}
-
-
-async def test_teacher_rate_unauthorized(client):
-    app.dependency_overrides[get_isu] = lambda: None
-
-    response = await client.post("/teacher/1/rate", json={"user_rating": 5})
-    assert response.status_code == 401
-
-
-async def test_teacher_rate_not_found(client, mock_reviews_service):
-    mock_reviews_service.teacher_rate.return_value = None
-
-    response = await client.post("/teacher/999/rate", json={"user_rating": 5})
-    assert response.status_code == 404
-
-
-# ============================================================================
-# POST /comment/{iid}/vote
-# ============================================================================
-
-
-async def test_comment_vote_success(client, mock_reviews_service):
-    mock_reviews_service.comment_vote.return_value = CommentKarmaResponse(
-        karma=12, user_karma=1
-    )
-
-    response = await client.post("/comment/5/vote", json={"user_karma": 1})
-
-    assert response.status_code == 200
-    assert response.json() == {"karma": 12, "user_karma": 1}
-
-
-async def test_comment_vote_unauthorized(client):
-    app.dependency_overrides[get_isu] = lambda: None
-
-    response = await client.post("/comment/5/vote", json={"user_karma": 1})
-    assert response.status_code == 401
-
-
-async def test_comment_vote_not_found(client, mock_reviews_service):
-    mock_reviews_service.comment_vote.return_value = None
-
-    response = await client.post("/comment/999/vote", json={"user_karma": 1})
     assert response.status_code == 404
 
 

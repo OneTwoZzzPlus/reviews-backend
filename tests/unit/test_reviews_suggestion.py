@@ -12,7 +12,7 @@ async def test_add_suggestion_success(mock_db):
         text="Отличный преподаватель",
     )
 
-    res = await service.add_suggestion(isu=100001, data=data)
+    res = await service.add_suggestion(data=data)
 
     assert mock_db.add.call_count == 1
     assert mock_db.commit.call_count == 1

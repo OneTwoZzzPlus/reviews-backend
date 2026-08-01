@@ -1,10 +1,9 @@
 from typing import ClassVar
 
-from sqlalchemy import ForeignKey, String, func, select
-from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
-from models.content import CommentKarma, TeacherRating
 from models.schemas import PUBLIC_SCHEMA
 
 
@@ -56,18 +55,6 @@ class Teacher(Base):
         "Comment", back_populates="teacher"
     )
 
-    rating: Mapped[float] = column_property(
-        select(func.coalesce(func.round(func.avg(TeacherRating.user_rating), 1), 0.0))
-        .where(TeacherRating.teacher_id == id)
-        .correlate_except(TeacherRating)
-        .scalar_subquery()
-    )
-    ratings: Mapped[list["TeacherRating"]] = relationship()
-
-    @property
-    def user_rating(self) -> int | None:
-        return self.ratings[0].user_rating if self.ratings else None
-
     def __str__(self):
         return self.name
 
@@ -114,18 +101,6 @@ class Comment(Base):
     source: Mapped[Source | None] = relationship("Source")
     subject: Mapped[Subject | None] = relationship("Subject")
     teacher: Mapped[Teacher | None] = relationship("Teacher", back_populates="comments")
-
-    karma: Mapped[int] = column_property(
-        select(func.coalesce(func.sum(CommentKarma.user_karma), 0))
-        .where(CommentKarma.comment_id == id)
-        .correlate_except(CommentKarma)
-        .scalar_subquery()
-    )
-    karmas: Mapped[list["CommentKarma"]] = relationship()
-
-    @property
-    def user_karma(self) -> int | None:
-        return self.karmas[0].user_karma if self.karmas else None
 
     def __str__(self):
         return f"Отзыв ({len(self.text)})"
