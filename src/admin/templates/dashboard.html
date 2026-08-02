@@ -21,13 +21,28 @@
             aria-label="Close"
         ></button>
     </div>
+    {% endif %} {% if insights_status == 'started' %}
+    <div
+        class="alert alert-info alert-dismissible fade show shadow-sm"
+        role="alert"
+    >
+        <i class="fa-solid fa-brain me-2"></i>
+        <strong>Insights processing started!</strong> The AI is processing
+        teachers in the background with delays to comply with API rate limits.
+        <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+        ></button>
+    </div>
     {% endif %} {% if error_msg %}
     <div
         class="alert alert-danger alert-dismissible fade show shadow-sm"
         role="alert"
     >
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
-        <strong>Parser Error:</strong> {{ error_msg }}
+        <strong>Error:</strong> {{ error_msg }}
         <button
             type="button"
             class="btn-close"
@@ -37,9 +52,10 @@
     </div>
     {% endif %}
 
-    <!-- Statistics Section -->
+    <!-- Key Action Metrics -->
     <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-3">
+        <!-- Pending Suggestions -->
+        <div class="col-xl-6 col-md-6 mb-3">
             <div
                 class="card border-0 shadow-sm border-start border-4 border-warning h-100 py-2"
             >
@@ -65,25 +81,26 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-3">
+        <!-- Teachers Without Insights -->
+        <div class="col-xl-6 col-md-6 mb-3">
             <div
-                class="card border-0 shadow-sm border-start border-4 border-primary h-100 py-2"
+                class="card border-0 shadow-sm border-start border-4 border-danger h-100 py-2"
             >
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col me-2">
                             <div
-                                class="text-xs fw-bold text-primary text-uppercase mb-1"
+                                class="text-xs fw-bold text-danger text-uppercase mb-1"
                             >
-                                Total Suggestions
+                                Teachers Without Insights
                             </div>
                             <div class="h5 mb-0 fw-bold text-gray-800">
-                                {{ total_count }}
+                                {{ no_insights_count }}
                             </div>
                         </div>
                         <div class="col-auto">
                             <i
-                                class="fa-solid fa-lightbulb fa-2x text-black-50"
+                                class="fa-solid fa-user-slash fa-2x text-black-50"
                             ></i>
                         </div>
                     </div>
@@ -93,9 +110,10 @@
     </div>
 
     <!-- Actions Section -->
-    <div class="row">
+    <div class="row mb-5">
+        <!-- GSParser Panel -->
         <div class="col-lg-6 mb-4">
-            <div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white py-3">
                     <h5
                         class="m-0 fw-bold text-primary d-flex align-items-center gap-2"
@@ -104,7 +122,9 @@
                         (GSParser)
                     </h5>
                 </div>
-                <div class="card-body">
+                <div
+                    class="card-body d-flex flex-column justify-content-between"
+                >
                     <p class="card-text text-muted">
                         Fetch new raw feedback entries directly from the
                         connected Google Sheet. Unprocessed rows will be added
@@ -120,6 +140,151 @@
                             Run GSParser
                         </button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Generator Panel -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h5
+                        class="m-0 fw-bold text-purple d-flex align-items-center gap-2"
+                        style="color: #6f42c1"
+                    >
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                        Insights Generator
+                    </h5>
+                </div>
+                <div
+                    class="card-body d-flex flex-column justify-content-between"
+                >
+                    <p class="card-text text-muted">
+                        Scan all teachers and run AI analysis for those who lack
+                        insights or have new unanalyzed reviews. Safe rate
+                        limits (4.5s delay) are applied automatically.
+                    </p>
+
+                    <form method="POST" action="/admin/dashboard/run-insights">
+                        <button
+                            type="submit"
+                            class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4"
+                            style="border-color: #6f42c1; color: #6f42c1"
+                            onmouseover="
+                                this.style.backgroundColor = '#6f42c1';
+                                this.style.color = '#fff';
+                            "
+                            onmouseout="
+                                this.style.backgroundColor = 'transparent';
+                                this.style.color = '#6f42c1';
+                            "
+                        >
+                            <i class="fa-solid fa-brain"></i>
+                            Run Bulk Insights Process
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General System Statistics Section -->
+    <h4 class="h5 mb-3 text-gray-800 fw-bold">General Statistics</h4>
+    <div class="row">
+        <!-- Reviews Count -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 py-2 bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-secondary text-uppercase mb-1"
+                            >
+                                Total Reviews
+                            </div>
+                            <div class="h4 mb-0 fw-bold text-gray-800">
+                                {{ total_comments }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i
+                                class="fa-solid fa-comments fa-2x text-muted"
+                            ></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teachers Count -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 py-2 bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-secondary text-uppercase mb-1"
+                            >
+                                Total Teachers
+                            </div>
+                            <div class="h4 mb-0 fw-bold text-gray-800">
+                                {{ total_teachers }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i
+                                class="fa-solid fa-chalkboard-user fa-2x text-muted"
+                            ></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subjects Count -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 py-2 bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-secondary text-uppercase mb-1"
+                            >
+                                Total Subjects
+                            </div>
+                            <div class="h4 mb-0 fw-bold text-gray-800">
+                                {{ total_subjects }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fa-solid fa-book fa-2x text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sources Count -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 py-2 bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col me-2">
+                            <div
+                                class="text-xs fw-bold text-secondary text-uppercase mb-1"
+                            >
+                                Total Sources
+                            </div>
+                            <div class="h4 mb-0 fw-bold text-gray-800">
+                                {{ total_sources }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i
+                                class="fa-solid fa-share-nodes fa-2x text-muted"
+                            ></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

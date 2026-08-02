@@ -4,8 +4,8 @@ from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database import Base
-from enums import SuggestionStatus
-from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
+from enums.reviews import SuggestionStatus
+from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
 
 class Moderator(Base):
@@ -16,28 +16,6 @@ class Moderator(Base):
     access: Mapped[bool] = mapped_column(default=False)
     name: Mapped[str] = mapped_column(String)
     password_hash: Mapped[str] = mapped_column(String)
-
-
-class CommentKarma(Base):
-    __tablename__ = "comment_karma"
-    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
-
-    isu: Mapped[int] = mapped_column(primary_key=True)
-    comment_id: Mapped[int] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.comment.id"), primary_key=True
-    )
-    user_karma: Mapped[int] = mapped_column()
-
-
-class TeacherRating(Base):
-    __tablename__ = "teacher_rating"
-    __table_args__: ClassVar[dict] = {"schema": CONTENT_SCHEMA}
-
-    isu: Mapped[int] = mapped_column(primary_key=True)
-    teacher_id: Mapped[int] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.teacher.id"), primary_key=True
-    )
-    user_rating: Mapped[int] = mapped_column()
 
 
 class Suggestion(Base):
@@ -53,7 +31,6 @@ class Suggestion(Base):
         ),
         default=SuggestionStatus.delayed,
     )
-    user_isu: Mapped[int | None] = mapped_column(default=None)
     moderator_isu: Mapped[int | None] = mapped_column(default=None)
     text: Mapped[str] = mapped_column(String)
     teacher_id: Mapped[int | None] = mapped_column(default=None)
@@ -63,7 +40,7 @@ class Suggestion(Base):
     subs_id: Mapped[str | None] = mapped_column(String, default=None)
     subs_title: Mapped[str | None] = mapped_column(String, default=None)
     comment_id: Mapped[int | None] = mapped_column(
-        ForeignKey(f"{PUBLIC_SCHEMA}.comment.id", ondelete="CASCADE"), default=None
+        ForeignKey("public.comment.id", ondelete="CASCADE"), default=None
     )
     source_id: Mapped[int] = mapped_column(default=1)
     date: Mapped[str] = mapped_column(String)

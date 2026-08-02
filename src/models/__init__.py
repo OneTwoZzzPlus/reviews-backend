@@ -1,10 +1,9 @@
 from models.content import (
-    CommentKarma,
     Moderator,
     Processed,
     Suggestion,
-    TeacherRating,
 )
+from models.insights import Insights
 from models.reviews import (
     Comment,
     RelationST,
@@ -16,7 +15,7 @@ from models.reviews import (
 
 __all__ = [
     "Comment",
-    "CommentKarma",
+    "Insights",
     "Moderator",
     "Processed",
     "RelationST",
@@ -25,5 +24,4 @@ __all__ = [
     "Suggestion",
     "Summary",
     "Teacher",
-    "TeacherRating",
 ]

@@ -1,4 +1,5 @@
 import re
+import string
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta, timezone
 from typing import ClassVar
@@ -6,41 +7,42 @@ from typing import ClassVar
 from fastapi import Depends
 from rapidfuzz import fuzz
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload, with_loader_criteria
+from sqlalchemy.orm import selectinload
 
+from core.cache import get_data_version
 from core.database import AsyncSession, get_database
-from enums import SearchType, SuggestionStatus
-from models.content import CommentKarma, Suggestion, TeacherRating
-from models.reviews import Comment, RelationST, Subject, Teacher
+from enums.reviews import SearchType, SuggestionStatus
+from models.content import Suggestion
+from models.insights import Insights as InsightsModel
+from models.reviews import Comment, Subject, Teacher
+from schemas.insights import (
+    Confidence,
+    Difficulty,
+    GradingFairness,
+    Insights,
+    InsightsEssential,
+    InsightsShort,
+    Organization,
+    Rating,
+    Scores,
+    Strictness,
+    StudentAttitude,
+    Teaching,
+    Workload,
+)
 from schemas.reviews import (
-    CommentAddRequest,
-    CommentAddResponse,
-    CommentKarmaResponse,
     CommentSchema,
-    InputItem,
+    RegistryResponse,
     SearchItem,
     SearchResponse,
     SourceSchema,
     SubjectResponse,
     SubjectSchema,
-    SubjectUpdateRequest,
-    SubjectUpdateResponse,
-    SuggestionAddRequest,
-    SuggestionAddResponse,
-    SuggestionCancelRequest,
-    SuggestionCancelResponse,
-    SuggestionCommitRequest,
-    SuggestionCommitResponse,
-    SuggestionItem,
-    SuggestionListResponse,
+    SuggestionRequest,
     SuggestionResponse,
     SummarySchema,
-    TeacherRateResponse,
     TeacherResponse,
-    TeacherUpdateRequest,
-    TeacherUpdateResponse,
+    TeacherShort,
 )
 
 
@@ -55,6 +57,15 @@ def normalize(text: str) -> str:
     return text
 
 
+def review_section(text: str) -> str:
+    words = text.split()
+    if len(words) < 30:
+        return text
+    selected = words[:20]
+    selected[-1] = selected[-1].rstrip(string.punctuation)
+    return " ".join(selected) + "..."
+
+
 def get_current_time():
     utc_plus_3 = timezone(timedelta(hours=3))
     current_time = datetime.now(UTC).astimezone(utc_plus_3)
@@ -63,15 +74,23 @@ def get_current_time():
 
 class ReviewsService:
     # static cache variables
+    _version = None
     _teachers_cache: ClassVar[list[dict]] = []
     _subjects_cache: ClassVar[list[dict]] = []
-    _cache_loaded: ClassVar[bool] = False
+    _registry: ClassVar[RegistryResponse] = None
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def reload_cache(self):
-        """Loading the search cache"""
+        """Loading the search and registry cache"""
+
+        current = get_data_version()
+        if ReviewsService._version == current:
+            return
+
+        # /search
+
         teachers_stmt = select(Teacher.id, Teacher.name)
         teachers_res = await self.session.execute(teachers_stmt)
         ReviewsService._teachers_cache = [
@@ -84,11 +103,36 @@ class ReviewsService:
             {"title": title, "id": s_id} for s_id, title in subjects_res.all()
         ]
 
-        ReviewsService._cache_loaded = True
+        # /registry
+
+        stmt = select(InsightsModel).options(selectinload(InsightsModel.teacher))
+        results = await self.session.execute(stmt)
+        original = {}
+        normalized = {}
+        insights = {}
+        for ins in results.scalars():
+            if ins.teacher is None:
+                continue
+            id, name = ins.teacher.id, ins.teacher.name
+            original[name] = id
+            normalized["".join(name.split()).lower()] = id
+            insights[id] = InsightsEssential(
+                rating_value=ins.rating_value, confidence_value=ins.confidence_value
+            )
+        ReviewsService._registry = RegistryResponse(
+            original=original,
+            normalized=normalized,
+            insights=insights,
+        )
+
+        ReviewsService._version = current
+
+    async def registry(self) -> RegistryResponse:
+        await self.reload_cache()
+        return ReviewsService._registry
 
     async def search(self, query: str, strainer: str | None) -> SearchResponse:
-        if not ReviewsService._cache_loaded:
-            await self.reload_cache()
+        await self.reload_cache()
 
         normalized_query = normalize(query)
         if not normalized_query:
@@ -144,183 +188,120 @@ class ReviewsService:
             ]
         )
 
-    async def teacher(self, iid: int, isu: int | None = None) -> TeacherResponse | None:
+    async def teacher(self, iid: int) -> TeacherResponse | None:
         stmt = (
             select(Teacher)
             .options(
+                selectinload(Teacher.insight),
                 selectinload(Teacher.summaries),
-                selectinload(Teacher.ratings),
                 selectinload(Teacher.comments).joinedload(Comment.source),
                 selectinload(Teacher.comments).joinedload(Comment.subject),
-                selectinload(Teacher.comments).selectinload(Comment.karmas),
             )
             .where(Teacher.id == iid)
         )
 
-        if isu:
-            stmt = stmt.options(
-                with_loader_criteria(TeacherRating, TeacherRating.isu == isu),
-                with_loader_criteria(CommentKarma, CommentKarma.isu == isu),
-            )
-
-        teacher_obj = await self.session.scalar(stmt)
-        if not teacher_obj:
+        t = await self.session.scalar(stmt)
+        if not t:
             return None
 
+        insights = None
+        if t.insight:
+            i = t.insight
+            insights = Insights(
+                summary=i.summary,
+                pros=i.pros,
+                cons=i.cons,
+                highlights=i.highlights,
+                rating=Rating(value=i.rating_value, reason=i.rating_reason),
+                confidence=Confidence(
+                    value=i.confidence_value, reason=i.confidence_reason
+                ),
+                scores=Scores(
+                    teaching=Teaching(value=i.teaching_value, reason=i.teaching_reason),
+                    student_attitude=StudentAttitude(
+                        value=i.student_attitude_value, reason=i.student_attitude_reason
+                    ),
+                    organization=Organization(
+                        value=i.organization_value, reason=i.organization_reason
+                    ),
+                    grading_fairness=GradingFairness(
+                        value=i.grading_fairness_value, reason=i.grading_fairness_reason
+                    ),
+                    strictness=Strictness(
+                        value=i.strictness_value, reason=i.strictness_reason
+                    ),
+                    workload=Workload(value=i.workload_value, reason=i.workload_reason),
+                    difficulty=Difficulty(
+                        value=i.difficulty_value, reason=i.difficulty_reason
+                    ),
+                ),
+            )
+
         return TeacherResponse(
-            id=teacher_obj.id,
-            name=teacher_obj.name,
-            rating=teacher_obj.rating,
-            user_rating=teacher_obj.user_rating if isu else None,
+            id=t.id,
+            name=t.name,
+            insights=insights,
             summaries=[
-                SummarySchema(title=s.title, value=s.value)
-                for s in teacher_obj.summaries
+                SummarySchema(title=summ.title, value=summ.value)
+                for summ in t.summaries
             ],
             comments=[
                 CommentSchema(
                     id=c.id,
                     date=c.date,
                     text=c.text,
-                    karma=c.karma,
-                    user_karma=c.user_karma if isu else None,
                     source=SourceSchema(title=c.source.title, link=c.source.link)
                     if c.source
                     else None,
                     subject=SubjectSchema(title=c.subject.title) if c.subject else None,
                 )
-                for c in teacher_obj.comments
+                for c in t.comments
             ],
         )
 
-    async def subject(self, iid: int, isu: int | None = None) -> SubjectResponse | None:
+    async def subject(self, iid: int) -> SubjectResponse | None:
         stmt = (
             select(Subject)
             .options(
-                selectinload(Subject.teachers).selectinload(Teacher.summaries),
-                selectinload(Subject.teachers).selectinload(Teacher.ratings),
-                selectinload(Subject.teachers)
-                .selectinload(Teacher.comments)
-                .joinedload(Comment.source),
-                selectinload(Subject.teachers)
-                .selectinload(Teacher.comments)
-                .joinedload(Comment.subject),
-                selectinload(Subject.teachers)
-                .selectinload(Teacher.comments)
-                .selectinload(Comment.karmas),
+                selectinload(Subject.teachers).selectinload(Teacher.insight),
+                selectinload(Subject.teachers).selectinload(Teacher.comments),
             )
             .where(Subject.id == iid)
         )
 
-        if isu:
-            stmt = stmt.options(
-                with_loader_criteria(TeacherRating, TeacherRating.isu == isu),
-                with_loader_criteria(CommentKarma, CommentKarma.isu == isu),
-            )
-
-        subject_obj = await self.session.scalar(stmt)
-        if not subject_obj:
+        s = await self.session.scalar(stmt)
+        if not s:
             return None
 
         return SubjectResponse(
-            id=subject_obj.id,
-            title=subject_obj.title,
+            id=s.id,
+            title=s.title,
             teachers=[
-                TeacherResponse(
+                TeacherShort(
                     id=t.id,
                     name=t.name,
-                    rating=t.rating,
-                    user_rating=t.user_rating if isu else None,
-                    summaries=[
-                        SummarySchema(title=s.title, value=s.value) for s in t.summaries
-                    ],
-                    comments=[
-                        CommentSchema(
-                            id=c.id,
-                            date=c.date,
-                            text=c.text,
-                            karma=c.karma,
-                            user_karma=c.user_karma if isu else None,
-                            source=SourceSchema(
-                                title=c.source.title, link=c.source.link
-                            )
-                            if c.source
-                            else None,
-                            subject=SubjectSchema(title=c.subject.title)
-                            if c.subject
-                            else None,
-                        )
-                        for c in t.comments
-                    ],
+                    alt=review_section(t.comments[-1].text) if t.comments else None,
+                    insights=InsightsShort(
+                        summary=t.insight.summary,
+                        pros=t.insight.pros,
+                        cons=t.insight.cons,
+                        highlights=t.insight.highlights,
+                        rating=Rating(
+                            value=t.insight.rating_value, reason=t.insight.rating_reason
+                        ),
+                        confidence=Confidence(
+                            value=t.insight.confidence_value,
+                            reason=t.insight.confidence_reason,
+                        ),
+                    )
+                    if t.insight
+                    else None,
                 )
-                for t in subject_obj.teachers
+                for t in s.teachers
             ],
         )
 
-    async def teacher_rate(
-        self, isu: int, iid: int, rating: int
-    ) -> TeacherRateResponse | None:
-        try:
-            stmt = pg_insert(TeacherRating).values(
-                isu=isu, teacher_id=iid, user_rating=rating
-            )
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["isu", "teacher_id"],
-                set_={"user_rating": stmt.excluded.user_rating},
-            )
-            await self.session.execute(stmt)
-            await self.session.commit()
-
-            teacher_obj = await self.teacher(iid, isu=isu)
-            if not teacher_obj:
-                return None
-
-            return TeacherRateResponse(
-                rating=teacher_obj.rating,
-                user_rating=teacher_obj.user_rating or 0,
-            )
-        except IntegrityError as e:
-            await self.session.rollback()
-            print(e)
-            return None
-
-    async def comment_vote(
-        self, isu: int, iid: int, karma: int
-    ) -> CommentKarmaResponse | None:
-        try:
-            stmt = pg_insert(CommentKarma).values(
-                isu=isu, comment_id=iid, user_karma=karma
-            )
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["isu", "comment_id"],
-                set_={"user_karma": stmt.excluded.user_karma},
-            )
-            await self.session.execute(stmt)
-            await self.session.commit()
-
-            comment_stmt = (
-                select(Comment)
-                .options(
-                    selectinload(Comment.karmas),
-                    with_loader_criteria(CommentKarma, CommentKarma.isu == isu),
-                )
-                .where(Comment.id == iid)
-            )
-            comment_obj = await self.session.scalar(comment_stmt)
-            if not comment_obj:
-                return None
-
-            return CommentKarmaResponse(
-                karma=comment_obj.karma,
-                user_karma=comment_obj.user_karma or 0,
-            )
-        except IntegrityError as e:
-            await self.session.rollback()
-            print(e)
-            return None
-
-    async def add_suggestion(
-        self, isu: int | None, data: SuggestionAddRequest
-    ) -> SuggestionAddResponse:
+    async def add_suggestion(self, data: SuggestionRequest) -> SuggestionResponse:
         subs_id = (
             ";".join(["" if x.id is None else str(x.id) for x in data.subs])
             if data.subs
@@ -336,7 +317,6 @@ class ReviewsService:
 
         suggestion = Suggestion(
             status=SuggestionStatus.delayed,
-            user_isu=isu,
             text=data.text,
             teacher_id=data.teacher.id,
             teacher_title=data.teacher.title,
@@ -348,163 +328,7 @@ class ReviewsService:
         )
         self.session.add(suggestion)
         await self.session.commit()
-        return SuggestionAddResponse(id=suggestion.id)
-
-    async def list_suggestion(
-        self, delayed=True, accepted=False, rejected=False
-    ) -> SuggestionListResponse:
-        statuses = []
-        if delayed:
-            statuses.append(SuggestionStatus.delayed)
-        if accepted:
-            statuses.append(SuggestionStatus.accepted)
-        if rejected:
-            statuses.append(SuggestionStatus.rejected)
-
-        stmt = select(Suggestion).where(Suggestion.status.in_(statuses))
-        suggestions = (await self.session.scalars(stmt)).all()
-
-        return SuggestionListResponse(
-            items=[
-                SuggestionItem(
-                    id=s.id,
-                    status=s.status,
-                    title=s.teacher_title,
-                    source_id=s.source_id,
-                )
-                for s in suggestions
-            ]
-        )
-
-    async def get_suggestion(self, iid: int) -> SuggestionResponse | None:
-        s = await self.session.get(Suggestion, iid)
-        if s is None:
-            return None
-
-        subs = []
-        if s.subs_id and s.subs_title:
-            for x_id, x_title in zip(s.subs_id.split(";"), s.subs_title.split(";")):
-                subs.append(
-                    InputItem(id=None if x_id == "" else int(x_id), title=x_title)
-                )
-
-        return SuggestionResponse(
-            id=s.id,
-            status=s.status,
-            user_isu=s.user_isu,
-            moderator_isu=s.moderator_isu,
-            text=s.text,
-            teacher=InputItem(id=s.teacher_id, title=s.teacher_title),
-            subject=InputItem(id=s.subject_id, title=s.subject_title),
-            subs=subs,
-            comment_id=s.comment_id,
-        )
-
-    async def commit_suggestion(
-        self, isu: int, iid: int, body: SuggestionCommitRequest
-    ) -> SuggestionCommitResponse | None:
-        try:
-            suggestion = await self.session.get(Suggestion, iid)
-            if not suggestion:
-                return None
-
-            comment = Comment(
-                date=suggestion.date,
-                source_id=suggestion.source_id,
-                text=body.text,
-                subject_id=body.subject.id,
-                teacher_id=body.teacher.id,
-            )
-            self.session.add(comment)
-            await self.session.flush()
-
-            for s in body.subs + [body.subject]:
-                rel_stmt = (
-                    pg_insert(RelationST)
-                    .values(subject_id=s.id, teacher_id=body.teacher.id)
-                    .on_conflict_do_nothing()
-                )
-                await self.session.execute(rel_stmt)
-
-            suggestion.status = SuggestionStatus.accepted
-            suggestion.moderator_isu = isu
-            suggestion.comment_id = comment.id
-
-            await self.session.commit()
-            return SuggestionCommitResponse(comment_id=comment.id)
-        except IntegrityError as e:
-            await self.session.rollback()
-            print(e)
-            return None
-
-    async def cancel_suggestion(
-        self, isu: int, iid: int, body: SuggestionCancelRequest
-    ) -> SuggestionCancelResponse | None:
-        try:
-            suggestion = await self.session.get(Suggestion, iid)
-            if not suggestion:
-                return None
-
-            suggestion.status = body.status
-            suggestion.moderator_isu = isu
-            await self.session.commit()
-            return SuggestionCancelResponse(status=body.status)
-        except IntegrityError as e:
-            await self.session.rollback()
-            print(e)
-            return None
-
-    async def upsert_teacher(self, data: TeacherUpdateRequest) -> TeacherUpdateResponse:
-        stmt = pg_insert(Teacher).values(id=data.id, name=data.title)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["id"],
-            set_={"name": stmt.excluded.name},
-        )
-        await self.session.execute(stmt)
-        await self.session.commit()
-        await self.reload_cache()
-        return TeacherUpdateResponse(id=data.id)
-
-    async def upsert_subject(self, data: SubjectUpdateRequest) -> SubjectUpdateResponse:
-        if data.id is None:
-            subject = Subject(title=data.title)
-            self.session.add(subject)
-            await self.session.commit()
-            subject_id = subject.id
-        else:
-            stmt = pg_insert(Subject).values(id=data.id, title=data.title)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["id"],
-                set_={"title": stmt.excluded.title},
-            )
-            await self.session.execute(stmt)
-            await self.session.commit()
-            subject_id = data.id
-
-        await self.reload_cache()
-        return SubjectUpdateResponse(id=subject_id)
-
-    async def add_comment(self, data: CommentAddRequest) -> CommentAddResponse:
-        comment = Comment(
-            date=data.date,
-            text=data.text,
-            source_id=data.source_id,
-            subject_id=data.subject.id,
-            teacher_id=data.teacher.id,
-        )
-        self.session.add(comment)
-        await self.session.flush()
-
-        for s in data.subs + [data.subject]:
-            rel_stmt = (
-                pg_insert(RelationST)
-                .values(subject_id=s.id, teacher_id=data.teacher.id)
-                .on_conflict_do_nothing()
-            )
-            await self.session.execute(rel_stmt)
-
-        await self.session.commit()
-        return CommentAddResponse(id=comment.id)
+        return SuggestionResponse(id=suggestion.id)
 
 
 async def get_reviews_service(

@@ -9,7 +9,7 @@ from starlette.responses import RedirectResponse
 
 from admin.views.base import BaseAdminView, touch_data_version
 from core.database import async_session_maker
-from enums import SuggestionStatus
+from enums.reviews import SuggestionStatus
 from models.content import Suggestion
 from models.reviews import Comment, RelationST, Source, Subject, Teacher
 
@@ -46,7 +46,10 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
             )
             if model.status == SuggestionStatus.delayed
             else Markup(f"{model.id}")
-        )
+        ),
+        Suggestion.text: lambda m, _: (
+            m.text[:25] + "..." if len(m.text) > 25 else m.text
+        ),
     }
 
     def list_query(self, request: Request):

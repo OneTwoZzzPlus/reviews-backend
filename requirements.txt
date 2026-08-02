@@ -9,3 +9,4 @@ httpx
 sqladmin[asyncio]
 itsdangerous
 bcrypt
+google-genai

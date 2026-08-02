@@ -10,10 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
 from admin.setup import seed_initial_admin, setup_admin
-from api.authp import router as authp_router
-from api.mod import router as mod_router
 from api.reviews import router as reviews_router
-from core.auth import AuthMiddleware
 from core.config import settings
 from core.database import Base, engine
 from core.etag import ETagMiddleware
@@ -23,16 +20,15 @@ logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
     format="%(levelname)s:[%(asctime)s]:%(name)s: %(message)s",
 )
-
+STATIC_DIR = Path(__file__).resolve().parent.parent / "public"
 instrumentator = Instrumentator()
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     async with engine.begin() as conn:
-        from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA, PUBLIC_SCHEMA
+        from models.schemas import CONTENT_SCHEMA, GSPARSER_SCHEMA
 
-        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {PUBLIC_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {CONTENT_SCHEMA}"))
         await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {GSPARSER_SCHEMA}"))
         import_module("models")
@@ -44,14 +40,7 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-instrumentator.instrument(app)
-
-admin = setup_admin(app, engine)
-
 app.add_middleware(ETagMiddleware)
-
-app.add_middleware(AuthMiddleware, auth_verify=settings.AUTH_VERIFY)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,9 +50,8 @@ app.add_middleware(
     expose_headers=["ETag"],
 )
 
-app.include_router(reviews_router)
-app.include_router(authp_router)
-app.include_router(mod_router)
+instrumentator.instrument(app)
+admin = setup_admin(app, engine)
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "public"
+app.include_router(reviews_router)
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

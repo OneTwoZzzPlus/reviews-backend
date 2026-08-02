@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from enums import SearchType
+from enums.reviews import SearchType
 from services.reviews import ReviewsService
 
 

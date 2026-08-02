@@ -1,9 +1,7 @@
-from typing import Annotated
-
-from fastapi import Query
 from pydantic import BaseModel
 
-from enums import SearchType, SuggestionStatus
+from enums.reviews import SearchType
+from schemas.insights import Insights, InsightsEssential, InsightsShort
 
 
 class SubjectSchema(BaseModel):
@@ -14,8 +12,6 @@ class SubjectSchema(BaseModel):
 class TeacherSchema(BaseModel):
     id: int
     name: str
-    rating: float
-    user_rating: int | None = None
 
 
 class SourceSchema(BaseModel):
@@ -30,8 +26,6 @@ class CommentSchema(BaseModel):
     text: str
     subject: SubjectSchema
     source: SourceSchema
-    karma: int
-    user_karma: int | None = None
 
 
 class SummarySchema(BaseModel):
@@ -40,13 +34,37 @@ class SummarySchema(BaseModel):
     value: str
 
 
+# /teacher
+
+
 class TeacherResponse(TeacherSchema):
+    insights: Insights | None = None
     summaries: list[SummarySchema]
     comments: list[CommentSchema]
 
 
+#  /subject
+
+
+class TeacherShort(TeacherSchema):
+    insights: InsightsShort | None = None
+    alt: str | None = None
+
+
 class SubjectResponse(SubjectSchema):
-    teachers: list[TeacherResponse]
+    teachers: list[TeacherShort]
+
+
+# /registry
+
+
+class RegistryResponse(BaseModel):
+    original: dict[str, int]  # original name -> id
+    normalized: dict[str, int]  # normalized name -> id
+    insights: dict[int, InsightsEssential]  # id -> insights
+
+
+# /search
 
 
 class SearchItem(BaseModel):
@@ -59,40 +77,7 @@ class SearchResponse(BaseModel):
     results: list[SearchItem]
 
 
-class TeacherRateResponse(BaseModel):
-    rating: float
-    user_rating: int
-
-
-class TeacherRateRequest(BaseModel):
-    user_rating: Annotated[int, Query(ge=1, le=5)]
-
-
-class CommentKarmaResponse(BaseModel):
-    karma: int
-    user_karma: int
-
-
-class CommentKarmaRequest(BaseModel):
-    user_karma: Annotated[int, Query(ge=-1, le=1)]
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-
-class TokenResponse(BaseModel):
-    refresh_token: str
-    access_token: str
-
-
-class ModeratorResponse(BaseModel):
-    access: bool
+# /suggestion
 
 
 class InputItem(BaseModel):
@@ -100,94 +85,12 @@ class InputItem(BaseModel):
     title: str | None = None
 
 
-class SuggestionAddRequest(BaseModel):
+class SuggestionRequest(BaseModel):
     teacher: InputItem
     subject: InputItem
     subs: list[InputItem]
     text: str
-
-
-class SuggestionAddResponse(BaseModel):
-    id: int
 
 
 class SuggestionResponse(BaseModel):
     id: int
-    status: SuggestionStatus
-    user_isu: int | None = None
-    moderator_isu: int | None = None
-    text: str
-    teacher: InputItem
-    subject: InputItem
-    subs: list[InputItem]
-    comment_id: int | None = None
-
-
-class SuggestionItem(BaseModel):
-    id: int
-    status: SuggestionStatus
-    title: str
-    source_id: int
-
-
-class SuggestionListResponse(BaseModel):
-    items: list[SuggestionItem]
-
-
-class CommitedItem(BaseModel):
-    id: int
-    title: str
-
-
-class SuggestionCommitRequest(BaseModel):
-    teacher: CommitedItem
-    subject: CommitedItem
-    subs: list[CommitedItem]
-    text: str
-
-
-class SuggestionCommitResponse(BaseModel):
-    comment_id: int | None = None
-
-
-class SuggestionCancelRequest(BaseModel):
-    status: SuggestionStatus = SuggestionStatus.rejected
-
-
-class SuggestionCancelResponse(BaseModel):
-    status: SuggestionStatus
-
-
-class TeacherUpdateRequest(BaseModel):
-    id: int
-    title: str
-
-
-class TeacherUpdateResponse(BaseModel):
-    id: int
-
-
-class SubjectUpdateRequest(BaseModel):
-    id: int | None
-    title: str
-
-
-class SubjectUpdateResponse(BaseModel):
-    id: int
-
-
-class CommentAddRequest(BaseModel):
-    source_id: int
-    date: str
-    teacher: CommitedItem
-    subject: CommitedItem
-    subs: list[CommitedItem]
-    text: str
-
-
-class CommentAddResponse(BaseModel):
-    id: int
-
-
-class GSParserResponse(BaseModel):
-    count: int

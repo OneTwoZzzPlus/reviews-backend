@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_database
-from enums import SuggestionStatus
+from enums.reviews import SuggestionStatus
 from models.content import Processed, Suggestion
 
 

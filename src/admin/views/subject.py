@@ -1,5 +1,8 @@
 from typing import ClassVar
 
+from sqlalchemy.orm import selectinload
+from starlette.requests import Request
+
 from admin.views.base import BaseAdminView
 from models.reviews import Subject
 
@@ -14,8 +17,15 @@ class SubjectAdmin(BaseAdminView, model=Subject):
     column_list: ClassVar = [
         Subject.id,
         Subject.title,
-        Subject.teachers,
+        "teachers_count",
     ]
+
+    column_labels: ClassVar = {
+        "teachers_count": "teachers",
+    }
+
+    def list_query(self, request: Request):
+        return super().list_query(request).options(selectinload(Subject.teachers))
 
     column_searchable_list: ClassVar = [Subject.title]
 
@@ -25,7 +35,7 @@ class SubjectAdmin(BaseAdminView, model=Subject):
     ]
 
     column_formatters: ClassVar = {
-        Subject.teachers: lambda m, _: [f"{len(m.teachers)}"],
+        "teachers_count": lambda m, _: len(m.teachers) if m.teachers else 0,
     }
 
     form_columns: ClassVar = [
