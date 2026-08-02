@@ -46,7 +46,10 @@ class SuggestionAdmin(BaseAdminView, model=Suggestion):
             )
             if model.status == SuggestionStatus.delayed
             else Markup(f"{model.id}")
-        )
+        ),
+        Suggestion.text: lambda m, _: (
+            m.text[:25] + "..." if len(m.text) > 25 else m.text
+        ),
     }
 
     def list_query(self, request: Request):

@@ -31,9 +31,7 @@ class CommentAdmin(BaseAdminView, model=Comment):
     ]
 
     column_formatters: ClassVar = {
-        Comment.text: lambda m, _: (
-            [m.text[:50] + "..."] if len(m.text) > 50 else [m.text]
-        ),
+        Comment.text: lambda m, _: m.text[:25] + "..." if len(m.text) > 25 else m.text,
     }
 
     form_columns: ClassVar = [

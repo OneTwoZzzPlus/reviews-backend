@@ -2,6 +2,7 @@ from typing import ClassVar
 
 from markupsafe import Markup
 from sqladmin import action
+from sqlalchemy.orm import selectinload
 from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
@@ -23,9 +24,16 @@ class TeacherAdmin(BaseAdminView, model=Teacher):
         Teacher.id,
         Teacher.name,
         Teacher.insight,
-        Teacher.comments,
+        "comments_count",
         Teacher.subjects,
     ]
+
+    column_labels: ClassVar = {
+        "comments_count": "сomments",
+    }
+
+    def list_query(self, request: Request):
+        return super().list_query(request).options(selectinload(Teacher.comments))
 
     column_searchable_list: ClassVar = [Teacher.name]
 
@@ -35,13 +43,7 @@ class TeacherAdmin(BaseAdminView, model=Teacher):
     ]
 
     column_formatters: ClassVar = {
-        Teacher.summaries: lambda m, _: [str(len(m.summaries))],
-        Teacher.comments: lambda m, _: [str(len(m.comments))],
-        Teacher.subjects: lambda m, _: (
-            m.subjects[:1] + [f"and {len(m.subjects)} more"]
-            if len(m.subjects) > 1
-            else m.subjects
-        ),
+        "comments_count": lambda m, _: len(m.comments) if m.comments else 0,
         Teacher.insight: lambda m, _: (
             Markup(
                 f'<a class="btn btn-sm btn-outline-info" href="/admin/insights/details/{m.insight.id}">'
