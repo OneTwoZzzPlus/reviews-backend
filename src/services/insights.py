@@ -118,7 +118,7 @@ class InsightsService:
 
         try:
             response = await self.client.aio.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash-lite",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
@@ -219,9 +219,9 @@ async def run_bulk_insights_processing(session_factory, delay: float = 4.5):
                     processed += 1
             except GeminiAPIError as e:
                 logger.warning(
-                    f"Rate limit or API error for teacher {teacher_id}: {e}. Waiting 10s..."
+                    f"Rate limit or API error for teacher {teacher_id}: {e}. Stop."
                 )
-                await asyncio.sleep(10)
+                break
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Failed to process teacher {teacher_id}: {e}")
                 errors += 1

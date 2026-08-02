@@ -286,31 +286,54 @@ async def test_process_selected_teachers_background(
 
 @patch("services.insights.asyncio.sleep", new_callable=AsyncMock)
 @patch("services.insights.touch_data_version")
-async def test_run_bulk_insights_processing_handles_rate_limit(
-    mock_touch_data_version, mock_sleep
+async def test_run_bulk_insights_processing_breaks_on_any_gemini_error(
+    mock_touch_data_version,
+    mock_sleep,
 ):
-    """Проверяет обработку лимитов (429/GeminiAPIError) при массовой генерации."""
+    """
+    При возникновении любой GeminiAPIError цикл должен немедленно прерваться,
+    не обрабатывая оставшихся учителей и не вызывая дополнительных задержек.
+    """
+    # Подготовка моков сессии
     session_mock = AsyncMock()
     session_factory = MagicMock()
     session_factory.return_value.__aenter__.return_value = session_mock
+
+    # Список учителей для обработки
+    teacher_ids = [101, 102, 103]
 
     with (
         patch.object(
             InsightsService,
             "get_teachers_needing_update",
             new_callable=AsyncMock,
+            return_value=teacher_ids,
         ) as mock_get_ids,
         patch.object(
-            InsightsService, "process_teacher", new_callable=AsyncMock
+            InsightsService,
+            "process_teacher",
+            new_callable=AsyncMock,
         ) as mock_process,
     ):
-        mock_get_ids.return_value = [100]
-        mock_process.side_effect = GeminiAPIError("Rate limit hit")
+        # Первый же вызов process_teacher выбрасывает GeminiAPIError
+        mock_process.side_effect = GeminiAPIError("Simulated API error")
 
-        await run_bulk_insights_processing(session_factory=session_factory, delay=0.1)
+        # Запускаем массовую обработку с маленькой задержкой для теста
+        await run_bulk_insights_processing(
+            session_factory=session_factory,
+            delay=0.1,
+        )
 
-        # Должен сделать обычную паузу и дополнительный sleep на 10 секунд при 429 ошибке
-        assert mock_sleep.call_count == 2
-        mock_sleep.assert_any_call(10)
-        # Так как обработанных 0, touch_data_version не вызвался
+        # Проверяем, что process_teacher был вызван ровно один раз (для первого учителя)
+        assert mock_process.call_count == 1
+        mock_process.assert_called_once_with(101, force=False)
+
+        # Проверяем, что asyncio.sleep не вызывался ни разу
+        # (потому что мы прервались до await sleep(delay))
+        assert mock_sleep.call_count == 0
+
+        # Так как ни один учитель не был успешно обработан, версия данных не обновляется
         mock_touch_data_version.assert_not_called()
+
+        # Убедимся, что get_teachers_needing_update был вызван (это происходит до цикла)
+        mock_get_ids.assert_awaited_once()
