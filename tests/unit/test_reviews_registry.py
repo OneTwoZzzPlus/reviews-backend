@@ -54,7 +54,7 @@ async def test_registry_returns_cached_data(mock_db):
     assert registry.original == {"Иванов И.И.": 1}
     assert registry.normalized == {"иванови.и.": 1}
     assert len(registry.insights) == 1
-    assert registry.insights[1].summary == "Тест"
+    assert registry.insights[1].rating_value == "POSITIVE"
     assert ReviewsService._registry is registry
     assert ReviewsService._version == get_data_version()
 
@@ -95,7 +95,7 @@ async def test_registry_skips_insights_without_teacher(mock_db):
 
     assert len(registry.insights) == 1
     assert 1 in registry.insights
-    assert registry.insights[1].summary == "Есть учитель"
+    assert registry.insights[1].rating_value == "POSITIVE"
     assert 2 not in registry.insights
 
 

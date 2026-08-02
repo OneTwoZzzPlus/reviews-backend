@@ -88,6 +88,5 @@ class InsightsShort(BaseModel):
 
 
 class InsightsEssential(BaseModel):
-    summary: str
-    rating: Rating
-    confidence: Confidence
+    rating_value: RatingScore
+    confidence_value: ConfidenceScore

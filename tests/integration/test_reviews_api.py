@@ -4,7 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from main import app
-from schemas.insights import Confidence, InsightsEssential, Rating
+from schemas.insights import InsightsEssential
 from schemas.reviews import (
     RegistryResponse,
     SearchItem,
@@ -185,13 +185,13 @@ async def test_get_registry_success(client, mock_reviews_service):
         insights={
             1: InsightsEssential(
                 summary="Хороший преподаватель",
-                rating=Rating(value="POSITIVE", reason="отлично"),
-                confidence=Confidence(value="HIGH", reason="много отзывов"),
+                rating_value="POSITIVE",
+                confidence_value="HIGH",
             ),
             2: InsightsEssential(
                 summary="Строгий, но справедливый",
-                rating=Rating(value="EXCELLENT", reason="очень хорошо"),
-                confidence=Confidence(value="MEDIUM", reason="несколько отзывов"),
+                rating_value="EXCELLENT",
+                confidence_value="MEDIUM",
             ),
         },
     )
@@ -215,9 +215,8 @@ async def test_get_registry_success(client, mock_reviews_service):
     insights = data["insights"]
     assert "1" in insights
     assert "2" in insights
-    assert insights["1"]["summary"] == "Хороший преподаватель"
-    assert insights["1"]["rating"]["value"] == "POSITIVE"
-    assert insights["1"]["confidence"]["value"] == "HIGH"
+    assert insights["1"]["rating_value"] == "POSITIVE"
+    assert insights["1"]["confidence_value"] == "HIGH"
 
 
 async def test_get_registry_empty(client, mock_reviews_service):

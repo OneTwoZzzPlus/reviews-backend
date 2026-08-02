@@ -86,8 +86,8 @@ async def test_reload_cache_success(mock_db):
         "петровп.п.": 2,
     }
     assert len(registry.insights) == 2
-    assert registry.insights[1].summary == "Хороший преподаватель"
-    assert registry.insights[2].summary == "Строгий, но справедливый"
+    assert registry.insights[1].rating_value == "POSITIVE"
+    assert registry.insights[2].rating_value == "EXCELLENT"
 
 
 async def test_reload_cache_no_reload_when_version_same(mock_db):
@@ -201,4 +201,4 @@ async def test_reload_cache_reload_when_version_changed(mock_db):
     assert ReviewsService._teachers_cache == [{"title": "Петров", "id": 2}]
     assert ReviewsService._subjects_cache == [{"title": "Физика", "id": 20}]
     assert ReviewsService._registry.original == {"Петров": 2}
-    assert ReviewsService._registry.insights[2].summary == "Новый"
+    assert ReviewsService._registry.insights[2].rating_value == "EXCELLENT"

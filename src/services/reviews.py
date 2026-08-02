@@ -117,14 +117,7 @@ class ReviewsService:
             original[name] = id
             normalized["".join(name.split()).lower()] = id
             insights[id] = InsightsEssential(
-                summary=ins.summary,
-                rating=Rating(
-                    value=ins.rating_value,
-                    reason=ins.rating_reason,
-                ),
-                confidence=Confidence(
-                    value=ins.confidence_value, reason=ins.confidence_reason
-                ),
+                rating_value=ins.rating_value, confidence_value=ins.confidence_value
             )
         ReviewsService._registry = RegistryResponse(
             original=original,
