@@ -23,8 +23,9 @@ class Insights(Base):
     __table_args__: ClassVar[dict] = {"schema": "public"}
 
     id: Mapped[int] = mapped_column(ForeignKey("public.teacher.id"), primary_key=True)
-    summary: Mapped[str] = mapped_column(String)
+    comments_count: Mapped[int] = mapped_column(default=0)
 
+    summary: Mapped[str] = mapped_column(String)
     pros: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     cons: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     highlights: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)

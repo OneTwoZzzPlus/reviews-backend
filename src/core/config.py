@@ -12,7 +12,8 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "secret_key"
     MASTER_PASSWORD: str = "master_pass"
-    AUTH_VERIFY: bool = True
+
+    INSIGHTS_API_KEY: str = "insights_api_key"
 
     PG_HOST: str = "localhost"
     PG_PORT: int = 5432
