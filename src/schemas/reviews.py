@@ -59,8 +59,9 @@ class SubjectResponse(SubjectSchema):
 
 
 class RegistryResponse(BaseModel):
-    teachers: dict[str, int]  # name: id
-    insights: dict[int, InsightsEssential]  # id: Insights
+    original: dict[str, int]  # original name -> id
+    normalized: dict[str, int]  # normalized name -> id
+    insights: dict[int, InsightsEssential]  # id -> insights
 
 
 # /search

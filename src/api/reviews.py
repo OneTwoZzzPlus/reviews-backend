@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from enums.reviews import SearchType
 from schemas.reviews import (
+    RegistryResponse,
     SearchResponse,
     SubjectResponse,
     SuggestionRequest,
@@ -53,6 +54,14 @@ async def subject(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Subject '{iid}' not found"
         )
+    return answer.model_dump(exclude_none=True)
+
+
+@router.get("/registry", response_model_exclude_none=True)
+async def registry(
+    service: ReviewsService = Depends(get_reviews_service),
+) -> RegistryResponse:
+    answer = await service.registry()
     return answer.model_dump(exclude_none=True)
 
 

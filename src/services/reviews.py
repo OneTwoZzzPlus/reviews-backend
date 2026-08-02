@@ -9,15 +9,18 @@ from rapidfuzz import fuzz
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from core.cache import get_data_version
 from core.database import AsyncSession, get_database
 from enums.reviews import SearchType, SuggestionStatus
 from models.content import Suggestion
+from models.insights import Insights as InsightsModel
 from models.reviews import Comment, Subject, Teacher
 from schemas.insights import (
     Confidence,
     Difficulty,
     GradingFairness,
     Insights,
+    InsightsEssential,
     InsightsShort,
     Organization,
     Rating,
@@ -29,6 +32,7 @@ from schemas.insights import (
 )
 from schemas.reviews import (
     CommentSchema,
+    RegistryResponse,
     SearchItem,
     SearchResponse,
     SourceSchema,
@@ -70,15 +74,23 @@ def get_current_time():
 
 class ReviewsService:
     # static cache variables
+    _version = None
     _teachers_cache: ClassVar[list[dict]] = []
     _subjects_cache: ClassVar[list[dict]] = []
-    _cache_loaded: ClassVar[bool] = False
+    _registry: ClassVar[RegistryResponse] = None
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def reload_cache(self):
-        """Loading the search cache"""
+        """Loading the search and registry cache"""
+
+        current = get_data_version()
+        if ReviewsService._version == current:
+            return
+
+        # /search
+
         teachers_stmt = select(Teacher.id, Teacher.name)
         teachers_res = await self.session.execute(teachers_stmt)
         ReviewsService._teachers_cache = [
@@ -91,11 +103,43 @@ class ReviewsService:
             {"title": title, "id": s_id} for s_id, title in subjects_res.all()
         ]
 
-        ReviewsService._cache_loaded = True
+        # /registry
+
+        stmt = select(InsightsModel).options(selectinload(InsightsModel.teacher))
+        results = await self.session.execute(stmt)
+        original = {}
+        normalized = {}
+        insights = {}
+        for ins in results.scalars():
+            if ins.teacher is None:
+                continue
+            id, name = ins.teacher.id, ins.teacher.name
+            original[name] = id
+            normalized["".join(name.split()).lower()] = id
+            insights[id] = InsightsEssential(
+                summary=ins.summary,
+                rating=Rating(
+                    value=ins.rating_value,
+                    reason=ins.rating_reason,
+                ),
+                confidence=Confidence(
+                    value=ins.confidence_value, reason=ins.confidence_reason
+                ),
+            )
+        ReviewsService._registry = RegistryResponse(
+            original=original,
+            normalized=normalized,
+            insights=insights,
+        )
+
+        ReviewsService._version = current
+
+    async def registry(self) -> RegistryResponse:
+        await self.reload_cache()
+        return ReviewsService._registry
 
     async def search(self, query: str, strainer: str | None) -> SearchResponse:
-        if not ReviewsService._cache_loaded:
-            await self.reload_cache()
+        await self.reload_cache()
 
         normalized_query = normalize(query)
         if not normalized_query:

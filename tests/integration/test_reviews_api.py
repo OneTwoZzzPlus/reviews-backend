@@ -4,7 +4,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from main import app
+from schemas.insights import Confidence, InsightsEssential, Rating
 from schemas.reviews import (
+    RegistryResponse,
     SearchItem,
     SearchResponse,
     SubjectResponse,
@@ -165,3 +167,75 @@ async def test_suggestion_invalid_subs(client):
 
     response = await client.post("/suggestion", json=payload)
     assert response.status_code == 400
+
+
+# ============================================================================
+# GET /registry
+# ============================================================================
+
+
+async def test_get_registry_success(client, mock_reviews_service):
+    """
+    Успешное получение реестра преподавателей с инсайтами.
+    """
+    # Создаём мок-ответ RegistryResponse
+    mock_registry = RegistryResponse(
+        original={"Иванов И.И.": 1, "Петров П.П.": 2},
+        normalized={"иванови.и.": 1, "петровп.п.": 2},
+        insights={
+            1: InsightsEssential(
+                summary="Хороший преподаватель",
+                rating=Rating(value="POSITIVE", reason="отлично"),
+                confidence=Confidence(value="HIGH", reason="много отзывов"),
+            ),
+            2: InsightsEssential(
+                summary="Строгий, но справедливый",
+                rating=Rating(value="EXCELLENT", reason="очень хорошо"),
+                confidence=Confidence(value="MEDIUM", reason="несколько отзывов"),
+            ),
+        },
+    )
+
+    mock_reviews_service.registry.return_value = mock_registry
+
+    response = await client.get("/registry")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Проверяем структуру ответа
+    assert "original" in data
+    assert "normalized" in data
+    assert "insights" in data
+
+    assert data["original"] == {"Иванов И.И.": 1, "Петров П.П.": 2}
+    assert data["normalized"] == {"иванови.и.": 1, "петровп.п.": 2}
+
+    # Проверяем инсайты
+    insights = data["insights"]
+    assert "1" in insights
+    assert "2" in insights
+    assert insights["1"]["summary"] == "Хороший преподаватель"
+    assert insights["1"]["rating"]["value"] == "POSITIVE"
+    assert insights["1"]["confidence"]["value"] == "HIGH"
+
+
+async def test_get_registry_empty(client, mock_reviews_service):
+    """
+    Реестр может вернуть пустые словари (если нет преподавателей с инсайтами).
+    """
+    mock_registry = RegistryResponse(
+        original={},
+        normalized={},
+        insights={},
+    )
+
+    mock_reviews_service.registry.return_value = mock_registry
+
+    response = await client.get("/registry")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["original"] == {}
+    assert data["normalized"] == {}
+    assert data["insights"] == {}
