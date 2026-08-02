@@ -17,6 +17,7 @@ backend_log_level: INFO
 backend_pg_echo: FALSE
 backend_secret_key: "ChangeMe"
 backend_master_pass: "ChangeMe"
+backend_ingights_api_key: "ChangeMe"
 
 # Database
 pg_database: reviews
