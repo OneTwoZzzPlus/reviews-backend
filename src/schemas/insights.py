@@ -68,11 +68,26 @@ class Confidence(BaseModel):
     reason: str
 
 
-class TeacherEvaluation(BaseModel):
+class Insights(BaseModel):
     summary: str
     pros: list[str]
     cons: list[str]
     highlights: list[str]
     scores: Scores
+    rating: Rating
+    confidence: Confidence
+
+
+class InsightsShort(BaseModel):
+    summary: str
+    pros: list[str]
+    cons: list[str]
+    highlights: list[str]
+    rating: Rating
+    confidence: Confidence
+
+
+class InsightsEssential(BaseModel):
+    summary: str
     rating: Rating
     confidence: Confidence

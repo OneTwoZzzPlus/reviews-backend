@@ -1,4 +1,5 @@
 import re
+import string
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta, timezone
 from typing import ClassVar
@@ -12,6 +13,20 @@ from core.database import AsyncSession, get_database
 from enums.reviews import SearchType, SuggestionStatus
 from models.content import Suggestion
 from models.reviews import Comment, Subject, Teacher
+from schemas.insights import (
+    Confidence,
+    Difficulty,
+    GradingFairness,
+    Insights,
+    InsightsShort,
+    Organization,
+    Rating,
+    Scores,
+    Strictness,
+    StudentAttitude,
+    Teaching,
+    Workload,
+)
 from schemas.reviews import (
     CommentSchema,
     SearchItem,
@@ -23,6 +38,7 @@ from schemas.reviews import (
     SuggestionResponse,
     SummarySchema,
     TeacherResponse,
+    TeacherShort,
 )
 
 
@@ -35,6 +51,15 @@ def normalize(text: str) -> str:
     text = re.sub(r"[^а-яa-z0-9\s]", "", text)
     text = " ".join(text.split())
     return text
+
+
+def review_section(text: str) -> str:
+    words = text.split()
+    if len(words) < 30:
+        return text
+    selected = words[:20]
+    selected[-1] = selected[-1].rstrip(string.punctuation)
+    return " ".join(selected) + "..."
 
 
 def get_current_time():
@@ -130,6 +155,7 @@ class ReviewsService:
         stmt = (
             select(Teacher)
             .options(
+                selectinload(Teacher.insight),
                 selectinload(Teacher.summaries),
                 selectinload(Teacher.comments).joinedload(Comment.source),
                 selectinload(Teacher.comments).joinedload(Comment.subject),
@@ -137,16 +163,50 @@ class ReviewsService:
             .where(Teacher.id == iid)
         )
 
-        teacher_obj = await self.session.scalar(stmt)
-        if not teacher_obj:
+        t = await self.session.scalar(stmt)
+        if not t:
             return None
 
+        insights = None
+        if t.insight:
+            i = t.insight
+            insights = Insights(
+                summary=i.summary,
+                pros=i.pros,
+                cons=i.cons,
+                highlights=i.highlights,
+                rating=Rating(value=i.rating_value, reason=i.rating_reason),
+                confidence=Confidence(
+                    value=i.confidence_value, reason=i.confidence_reason
+                ),
+                scores=Scores(
+                    teaching=Teaching(value=i.teaching_value, reason=i.teaching_reason),
+                    student_attitude=StudentAttitude(
+                        value=i.student_attitude_value, reason=i.student_attitude_reason
+                    ),
+                    organization=Organization(
+                        value=i.organization_value, reason=i.organization_reason
+                    ),
+                    grading_fairness=GradingFairness(
+                        value=i.grading_fairness_value, reason=i.grading_fairness_reason
+                    ),
+                    strictness=Strictness(
+                        value=i.strictness_value, reason=i.strictness_reason
+                    ),
+                    workload=Workload(value=i.workload_value, reason=i.workload_reason),
+                    difficulty=Difficulty(
+                        value=i.difficulty_value, reason=i.difficulty_reason
+                    ),
+                ),
+            )
+
         return TeacherResponse(
-            id=teacher_obj.id,
-            name=teacher_obj.name,
+            id=t.id,
+            name=t.name,
+            insights=insights,
             summaries=[
-                SummarySchema(title=s.title, value=s.value)
-                for s in teacher_obj.summaries
+                SummarySchema(title=summ.title, value=summ.value)
+                for summ in t.summaries
             ],
             comments=[
                 CommentSchema(
@@ -158,7 +218,7 @@ class ReviewsService:
                     else None,
                     subject=SubjectSchema(title=c.subject.title) if c.subject else None,
                 )
-                for c in teacher_obj.comments
+                for c in t.comments
             ],
         )
 
@@ -166,50 +226,41 @@ class ReviewsService:
         stmt = (
             select(Subject)
             .options(
-                selectinload(Subject.teachers).selectinload(Teacher.summaries),
-                selectinload(Subject.teachers)
-                .selectinload(Teacher.comments)
-                .joinedload(Comment.source),
-                selectinload(Subject.teachers)
-                .selectinload(Teacher.comments)
-                .joinedload(Comment.subject),
+                selectinload(Subject.teachers).selectinload(Teacher.insight),
                 selectinload(Subject.teachers).selectinload(Teacher.comments),
             )
             .where(Subject.id == iid)
         )
 
-        subject_obj = await self.session.scalar(stmt)
-        if not subject_obj:
+        s = await self.session.scalar(stmt)
+        if not s:
             return None
 
         return SubjectResponse(
-            id=subject_obj.id,
-            title=subject_obj.title,
+            id=s.id,
+            title=s.title,
             teachers=[
-                TeacherResponse(
+                TeacherShort(
                     id=t.id,
                     name=t.name,
-                    summaries=[
-                        SummarySchema(title=s.title, value=s.value) for s in t.summaries
-                    ],
-                    comments=[
-                        CommentSchema(
-                            id=c.id,
-                            date=c.date,
-                            text=c.text,
-                            source=SourceSchema(
-                                title=c.source.title, link=c.source.link
-                            )
-                            if c.source
-                            else None,
-                            subject=SubjectSchema(title=c.subject.title)
-                            if c.subject
-                            else None,
-                        )
-                        for c in t.comments
-                    ],
+                    alt=review_section(t.comments[-1].text) if t.comments else None,
+                    insights=InsightsShort(
+                        summary=t.insight.summary,
+                        pros=t.insight.pros,
+                        cons=t.insight.cons,
+                        highlights=t.insight.highlights,
+                        rating=Rating(
+                            value=t.insight.rating_value, reason=t.insight.rating_reason
+                        ),
+                        confidence=Confidence(
+                            value=t.insight.confidence_value,
+                            reason=t.insight.confidence_reason,
+                        ),
+                    )
+                    if t.insight
+                    else None,
                 )
-                for t in subject_obj.teachers
+                for t in s.teachers
             ],
         )
 

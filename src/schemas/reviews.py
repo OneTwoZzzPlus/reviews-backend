@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from enums.reviews import SearchType
+from schemas.insights import Insights, InsightsEssential, InsightsShort
 
 
 class SubjectSchema(BaseModel):
@@ -33,16 +34,33 @@ class SummarySchema(BaseModel):
     value: str
 
 
-# /teacher /subject
+# /teacher
 
 
 class TeacherResponse(TeacherSchema):
+    insights: Insights | None = None
     summaries: list[SummarySchema]
     comments: list[CommentSchema]
 
 
+#  /subject
+
+
+class TeacherShort(TeacherSchema):
+    insights: InsightsShort | None = None
+    alt: str | None = None
+
+
 class SubjectResponse(SubjectSchema):
-    teachers: list[TeacherResponse]
+    teachers: list[TeacherShort]
+
+
+# /registry
+
+
+class RegistryResponse(BaseModel):
+    teachers: dict[str, int]  # name: id
+    insights: dict[int, InsightsEssential]  # id: Insights
 
 
 # /search
