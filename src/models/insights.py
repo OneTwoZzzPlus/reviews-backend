@@ -1,8 +1,8 @@
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from sqlalchemy import Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
 from enums.insights import (
@@ -17,12 +17,16 @@ from enums.insights import (
     WorkloadScore,
 )
 
+if TYPE_CHECKING:
+    from models.reviews import Teacher
+
 
 class Insights(Base):
     __tablename__ = "insights"
     __table_args__: ClassVar[dict] = {"schema": "public"}
 
     id: Mapped[int] = mapped_column(ForeignKey("public.teacher.id"), primary_key=True)
+    teacher: Mapped["Teacher"] = relationship(back_populates="insight")
     comments_count: Mapped[int] = mapped_column(default=0)
 
     summary: Mapped[str] = mapped_column(String)
