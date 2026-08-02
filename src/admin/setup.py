@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from admin.auth import AdminAuth, hash_password
 from admin.views.comment import CommentAdmin
 from admin.views.dashboard import DashboardAdmin
+from admin.views.insights import InsightsAdmin
 from admin.views.moderator import ModeratorAdmin
 from admin.views.source import SourceAdmin
 from admin.views.subject import SubjectAdmin
@@ -55,6 +56,7 @@ def setup_admin(app: FastAPI, engine: AsyncEngine) -> Admin:
     admin.add_view(SuggestionAdmin)
     admin.add_view(SubjectAdmin)
     admin.add_view(TeacherAdmin)
+    admin.add_view(InsightsAdmin)
     admin.add_view(SummaryAdmin)
     admin.add_view(CommentAdmin)
     admin.add_view(SourceAdmin)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 
@@ -6,10 +7,11 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
+from core.cache import touch_data_version
 from core.config import settings
 from core.database import AsyncSession, get_database
 from models.insights import Insights
@@ -154,6 +156,82 @@ class InsightsService:
             raise InsightsDatabaseError(f"Failed to commit insight to DB: {e}") from e
 
         return True
+
+    async def get_teachers_needing_update(self) -> list[int]:
+        stmt = (
+            select(Teacher.id)
+            .outerjoin(Teacher.insight)
+            .outerjoin(Teacher.comments)
+            .group_by(Teacher.id, Insights.comments_count)
+            .having(
+                (Teacher.insight == None)
+                | (func.count(Comment.id) != Insights.comments_count)
+            )
+        )
+        result = await self.session.scalars(stmt)
+        return result.all()
+
+
+async def process_selected_teachers_background(
+    session_factory, teacher_ids: list[int], force: bool = False, delay: float = 4.5
+):
+    logger.info(
+        f"Starting background insights generation for {len(teacher_ids)} teachers (force={force})."
+    )
+
+    processed_count = 0
+
+    for t_id in teacher_ids:
+        async with session_factory() as session:
+            service = InsightsService(session)
+            try:
+                was_processed = await service.process_teacher(t_id, force=force)
+                await session.commit()
+                if was_processed:
+                    processed_count += 1
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error generating insight for teacher {t_id}: {e}")
+
+        await asyncio.sleep(delay)
+
+    if processed_count > 0:
+        touch_data_version()
+
+    logger.info(f"Finished processing insights for {len(teacher_ids)} teachers.")
+
+
+async def run_bulk_insights_processing(session_factory, delay: float = 4.5):
+    async with session_factory() as session:
+        service = InsightsService(session)
+        teacher_ids = await service.get_teachers_needing_update()
+
+    logger.info(f"Starting bulk processing for {len(teacher_ids)} teachers.")
+
+    processed = 0
+    errors = 0
+
+    for teacher_id in teacher_ids:
+        async with session_factory() as session:
+            service = InsightsService(session)
+            try:
+                was_processed = await service.process_teacher(teacher_id, force=False)
+                if was_processed:
+                    processed += 1
+            except GeminiAPIError as e:
+                logger.warning(
+                    f"Rate limit or API error for teacher {teacher_id}: {e}. Waiting 10s..."
+                )
+                await asyncio.sleep(10)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Failed to process teacher {teacher_id}: {e}")
+                errors += 1
+
+        await asyncio.sleep(delay)
+
+    if processed > 0:
+        touch_data_version()
+
+    logger.info(f"Bulk processing finished. Processed: {processed}, Errors: {errors}")
 
 
 async def get_reviews_service(
